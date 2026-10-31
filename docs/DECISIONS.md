@@ -1,5 +1,10 @@
 # Implementation decisions
 
+- Cards and Dense Cards use the category's existing foreground colour for a 4 px left accent,
+  including compact context neighbours. Per-template column `color` overrides text (labels and
+  values) in all styles; omitted/reset colours preserve layout defaults. Accents remain category-based
+  even when the Category field is hidden or has a custom text colour. Image pixels are unchanged.
+
 - Duplicating an export config replaces another existing event person's complete pack settings,
   including session selection and enabled state, after choosing the recipient in a replacement
   dialog. It does not duplicate the person or item assignments. Legacy all-session selection is

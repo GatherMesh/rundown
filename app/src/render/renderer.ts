@@ -145,12 +145,19 @@ function grid(p: RenderPayload) {
     .map((c) => (/^\d+(\.\d+)?(px|fr)$/.test(c.width) ? c.width : 'minmax(0, 1fr)'))
     .join(' ');
 }
+function safeColor(value: unknown) {
+  return typeof value === 'string' && /^#[a-fA-F0-9]{6}$/.test(value) ? value : '';
+}
+function columnStyle(p: RenderPayload, key: ColumnKey) {
+  const color = safeColor(p.template.columns.find((c) => c.key === key)?.color);
+  return color ? ` style="color:${color};--column-color:${color}"` : '';
+}
 function tableHead(p: RenderPayload) {
   return p.template.itemStyle === 'table'
     ? `<div class="print-table-head" style="grid-template-columns:${grid(p)}">${columns(p)
         .map(
           (c) =>
-            `<div>${c.key === 'duration' ? 'Dur' : c.key === 'title' ? 'Item' : labels[c.key]}</div>`,
+            `<div${columnStyle(p, c.key)}>${c.key === 'duration' ? 'Dur' : c.key === 'title' ? 'Item' : labels[c.key]}</div>`,
         )
         .join('')}</div>`
     : '';
@@ -158,17 +165,19 @@ function tableHead(p: RenderPayload) {
 function block(p: RenderPayload, item: ComputedItem, continuation = false) {
   const cols = columns(p),
     style = p.template.itemStyle,
-    recipientClass = item.isRecipientItem ? ' recipient-row' : '';
+    recipientClass = item.isRecipientItem ? ' recipient-row' : '',
+    isCard = style === 'cards' || style === 'denseCards',
+    accent = ` style="--category-accent:${safeColor(item.category.fg) || '#5b6270'}"`;
   if (item.context) {
     const previous = p.items[item.number - 2];
     const before = !previous?.personIds.includes(p.recipient?.id ?? '');
-    return `<div class="print-context"><span class="mono">${time(p.session.startAt, item.startSec, p.event.timeZone)}</span><small>${before ? 'Before' : 'After'}</small><b>${escape(item.title)}</b><span>${escape(item.people.map((p) => p.name).join(', '))} · ${formatDuration(item.durationSec)}</span></div>`;
+    return `<div class="print-context${isCard ? ' print-category-accent' : ''}"${isCard ? accent : ''}><span class="mono"${columnStyle(p, 'start')}>${time(p.session.startAt, item.startSec, p.event.timeZone)}</span><small>${before ? 'Before' : 'After'}</small><b${columnStyle(p, 'title')}>${escape(item.title)}</b><span><span${columnStyle(p, 'people')}>${escape(item.people.map((p) => p.name).join(', '))}</span> · <span${columnStyle(p, 'duration')}>${formatDuration(item.durationSec)}</span></span></div>`;
   }
-  if (style === 'cards' || style === 'denseCards') {
+  if (isCard) {
     const visible = (key: ColumnKey) => cols.some((c) => c.key === key);
     const meta = [
-      visible('category') ? escape(item.category.name) : '',
-      visible('number') ? `Item ${item.number}` : '',
+      visible('category') ? `<span${columnStyle(p, 'category')}>${escape(item.category.name)}</span>` : '',
+      visible('number') ? `<span${columnStyle(p, 'number')}>Item ${item.number}</span>` : '',
     ]
       .filter(Boolean)
       .join(' · ');
@@ -176,7 +185,7 @@ function block(p: RenderPayload, item: ComputedItem, continuation = false) {
       .filter((c) => ['start', 'duration', 'end'].includes(c.key))
       .map(
         (c) =>
-          `<div><small>${labels[c.key]}</small><span class="mono">${cell(p, item, c.key)}</span></div>`,
+          `<div${columnStyle(p, c.key)}><small>${labels[c.key]}</small><span class="mono">${cell(p, item, c.key)}</span></div>`,
       )
       .join('');
     const rest = cols
@@ -184,20 +193,20 @@ function block(p: RenderPayload, item: ComputedItem, continuation = false) {
       .map((c) => {
         const value = cell(p, item, c.key);
         return value
-          ? `<div class="print-field field-${c.key}"><small>${labels[c.key]}</small><div>${value}</div></div>`
+          ? `<div class="print-field field-${c.key}"${columnStyle(p, c.key)}><small>${labels[c.key]}</small><div>${value}</div></div>`
           : '';
       })
       .join('');
-    return `<article class="print-item print-card${style === 'denseCards' ? ' print-dense-card' : ''}${recipientClass}"><div class="print-card-heading"><div><small class="print-card-meta">${meta}</small>${visible('title') ? `<h2>${escape(item.title)}</h2>` : ''}</div><div class="print-card-timing">${timing}</div></div>${rest}</article>`;
+    return `<article class="print-item print-card print-category-accent${style === 'denseCards' ? ' print-dense-card' : ''}${recipientClass}"${accent}><div class="print-card-heading"><div><small class="print-card-meta">${meta}</small>${visible('title') ? `<h2${columnStyle(p, 'title')}>${escape(item.title)}</h2>` : ''}</div><div class="print-card-timing">${timing}</div></div>${rest}</article>`;
   }
   if (style === 'table')
-    return `<div class="print-table-row${recipientClass}" style="grid-template-columns:${grid(p)}">${cols.map((c) => `<div class="print-cell ${['start', 'duration', 'end'].includes(c.key) ? 'mono' : ''}">${c.key === 'title' ? `<b>${cell(p, item, c.key)}</b>${p.template.columns.some((c) => c.key === 'category' && c.visible) ? `<small class="print-category">${escape(item.category.name)}</small>` : ''}` : cell(p, item, c.key)}</div>`).join('')}</div>`;
+    return `<div class="print-table-row${recipientClass}" style="grid-template-columns:${grid(p)}">${cols.map((c) => `<div class="print-cell ${['start', 'duration', 'end'].includes(c.key) ? 'mono' : ''}"${c.key === 'title' ? '' : columnStyle(p, c.key)}>${c.key === 'title' ? `<b${columnStyle(p, 'title')}>${cell(p, item, c.key)}</b>${p.template.columns.some((c) => c.key === 'category' && c.visible) ? `<small class="print-category"${columnStyle(p, 'category')}>${escape(item.category.name)}</small>` : ''}` : cell(p, item, c.key)}</div>`).join('')}</div>`;
   return `<article class="print-item ${style === 'compact' ? 'print-compact' : style === 'cueCard' ? 'print-cue' : 'print-card'}${recipientClass}">${cols
     .map((c) => {
       const value = cell(p, item, c.key);
       if (!value) return '';
-      if (c.key === 'title') return `<h2>${value}${continuation ? ' (cont.)' : ''}</h2>`;
-      return `<div class="print-field field-${c.key}"><small>${labels[c.key]}</small><div>${value}</div></div>`;
+      if (c.key === 'title') return `<h2${columnStyle(p, c.key)}>${value}${continuation ? ' (cont.)' : ''}</h2>`;
+      return `<div class="print-field field-${c.key}"${columnStyle(p, c.key)}><small>${labels[c.key]}</small><div>${value}</div></div>`;
     })
     .join('')}</article>`;
 }

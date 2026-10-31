@@ -152,6 +152,7 @@ export interface TemplateColumn {
   key: ColumnKey;
   visible: boolean;
   width: ColumnWidth;
+  color?: string; // #RRGGBB text colour; omitted = layout default
 }
 
 export interface Template {

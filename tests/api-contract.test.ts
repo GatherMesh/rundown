@@ -75,6 +75,24 @@ it('accepts Dense Cards when creating and updating templates', () => {
     }).success,
   ).toBe(true);
 });
+it.each([undefined, '#123aBC', '', 'red', '#123', '#123456;display:none', null])(
+  'validates optional template column text colour %s',
+  (color) => {
+    const { id, ...data } = seed.templates[0];
+    const columns = [{ ...data.columns[0], color }];
+    const valid = color === undefined || color === '#123aBC';
+    expect(
+      operations.templates_create.schema.safeParse({
+        tenantId: 'a',
+        data: { ...data, columns },
+      }).success,
+    ).toBe(valid);
+    expect(
+      operations.templates_update.schema.safeParse({ tenantId: 'a', id, data: { columns } })
+        .success,
+    ).toBe(valid);
+  },
+);
 it.each(['all', 'first', 'invalid'])('validates header pages setting %s', (headerPages) => {
   const { id, ...data } = seed.templates[0];
   expect(

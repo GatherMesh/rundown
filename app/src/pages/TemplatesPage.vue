@@ -55,14 +55,19 @@ function header(key: HeaderField, field: 'show' | 'align', value: boolean | stri
       },
     });
 }
-function column(index: number, field: 'visible' | 'width', value: boolean | string) {
+function column(index: number, field: 'visible' | 'width' | 'color', value: boolean | string) {
   if (!template.value) return;
   if (field === 'width' && !/^(auto|\d+(\.\d+)?(px|fr))$/.test(String(value))) {
     w.fail(new Error('Column width must be auto, pixels (80px), or flex (1fr).'));
     return;
   }
+  if (field === 'color' && value !== '' && !/^#[a-fA-F0-9]{6}$/.test(String(value))) {
+    w.fail(new Error('Column colour must be a six-digit hex colour (#RRGGBB).'));
+    return;
+  }
   const cols = structuredClone(template.value.columns.map((c) => ({ ...c })));
-  Object.assign(cols[index], { [field]: value });
+  if (field === 'color' && value === '') delete cols[index].color;
+  else Object.assign(cols[index], { [field]: value });
   patch({ columns: cols });
 }
 function reorder(index: number) {
@@ -324,6 +329,7 @@ function removeTemplate() {
               <h2>Columns</h2>
               <small class="muted">Drag to reorder</small>
             </div>
+            <p class="muted">Set text colours for this template. Reset to use the default.</p>
             <div class="column-options">
               <div
                 v-for="(c, index) in template.columns"
@@ -340,10 +346,31 @@ function removeTemplate() {
                   size="sm"
                   @update:model-value="(v) => column(index, 'visible', v)"
                 /><input
+                  class="column-width"
                   :value="c.width"
                   :aria-label="labels[c.key] + ' width'"
                   @change="column(index, 'width', ($event.target as HTMLInputElement).value)"
                 />
+                <input
+                  class="column-color"
+                  type="color"
+                  :value="c.color ?? '#16181d'"
+                  :aria-label="labels[c.key] + ' text colour'"
+                  :title="labels[c.key] + ' text colour'"
+                  @input="column(index, 'color', ($event.target as HTMLInputElement).value)"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  size="sm"
+                  icon="restart_alt"
+                  :disable="!c.color || !w.canEdit"
+                  :aria-label="'Reset ' + labels[c.key] + ' text colour'"
+                  @click="column(index, 'color', '')"
+                >
+                  <q-tooltip>Reset text colour</q-tooltip>
+                </q-btn>
               </div>
             </div>
           </section>

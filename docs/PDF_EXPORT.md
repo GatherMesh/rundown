@@ -57,12 +57,16 @@ each template document, restarting for each template/copy (not across the assemb
   line; right group = "Prepared for" + person name + date & time. Hidden fields collapse. Centre logo placement uses a middle column between equal-width left/right text groups.
 - **Footer**: `{template name} · copy x of n` · `Runtime h:mm:ss · ends h:mm am` · `Page x of y`.
 - **Item styles**
+  - Each template column can override its text colour (`color`, six-digit hex), including labels
+    and values in every layout. Omitted colours retain the layout defaults. Category text beneath
+    a table title uses the Category column's colour independently of Title.
   - `table` — one row per item, header row repeated on each page, visible columns in order,
     widths from the template (`auto` → content, `px`, `fr`). Title cell shows category as a small
     caps line underneath. Rows ≥ 1 px rules. Recipient rows get a light tint (#F3F5F8).
   - `cards` — one bordered card per item: category · item no., title, start/length/finish,
     then each visible field as a labelled block; image slide as a 16:9 thumbnail. Context items
-    render as a single compact line.
+    render as a single compact line. Cards and their context lines have a 4 px left border in the
+    category's `fg` colour, independent of the Category column's visibility or text colour.
   - `denseCards` — the same single-column cards with tighter padding, smaller headings, inline
     field labels and smaller image thumbnails. Body text stays at 12 px; filtering, highlighting,
     field order and whole-card pagination behave like `cards`.

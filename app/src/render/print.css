@@ -10,6 +10,8 @@
   overflow: hidden;
   text-align: left;
   flex-shrink: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 .print-page * {
   box-sizing: border-box;
@@ -186,7 +188,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 9px;
-  color: #5b6270;
+  color: var(--column-color, #5b6270);
   margin-bottom: 3px;
 }
 .print-card .field-notes,
@@ -373,7 +375,7 @@
   display: block;
   font-size: 9px;
   text-transform: uppercase;
-  color: #5b6270;
+  color: var(--column-color, #5b6270);
 }
 .print-card-timing span {
   font-size: 17px;
@@ -446,4 +448,7 @@
 }
 .print-dense-card .print-slide {
   max-height: 80px;
+}
+.print-category-accent {
+  border-left: 4px solid var(--category-accent, #5b6270);
 }

@@ -802,13 +802,14 @@ tr.selected {
 }
 .column-option {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   padding: 8px;
   background: #f8f9fb;
   border-radius: 6px;
 }
-.column-option input {
+.column-option .column-width {
   margin-left: auto;
   width: 50px;
   background: transparent;
@@ -817,6 +818,16 @@ tr.selected {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: #5b6270;
+}
+.column-option .column-color {
+  width: 28px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid #d5d9e0;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 .column-option .drag-handle {
   font-size: 16px;

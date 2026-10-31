@@ -77,7 +77,7 @@ Use fractional `order` keys so a drag only writes one document.
   headerPages?: 'all'|'first', // omitted = all pages
   header: { [K in HeaderField]: { show: boolean, align: K extends 'logo' ? 'left'|'center'|'right' : 'left'|'right' } },
   itemStyle: 'table'|'cards'|'denseCards'|'cueCard'|'compact',
-  columns: { key: ColumnKey, visible: boolean, width: 'auto' | `${number}px` | `${number}fr` }[],
+  columns: { key: ColumnKey, visible: boolean, width: 'auto' | `${number}px` | `${number}fr`, color?: string /* #RRGGBB text colour; omitted = layout default */ }[],
   filter: { scope: 'all'|'recipient'|'recipientPlusNeighbours', categoryIds: string[] | null },
   updatedAt
 }

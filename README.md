@@ -9,7 +9,7 @@ Firebase project: `gathermesh-rundown`, Sydney (`australia-southeast1`).
 
 - Multiple organisations and events, event-scoped people, tenant-wide categories and templates.
 - Realtime sessions with autosave, offline persistence, computed timing, drag reorder, quick-add, duplication, item deletion with undo, AV fields and slide uploads.
-- A4 portrait/landscape templates with configurable headers, fields, widths, filters and four item styles; live recipient previews use the same measured renderer as server PDFs.
+- A4 portrait/landscape templates with configurable headers, fields, widths, text colours, filters and five item styles. Cards and Dense Cards use category-coloured left accents; live recipient previews use the same measured renderer as server PDFs.
 - Person-specific session selections and packs with ordered templates, copies, collating, covers, duplex settings, 2-up/4-up imposition, download and browser printing.
 - Tenant membership rules with owner/editor/viewer permissions, image-upload restrictions and authenticated callable exports.
 

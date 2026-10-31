@@ -122,6 +122,7 @@ export const recordSchemas = {
           ]),
           visible: z.boolean(),
           width: z.string().regex(/^(auto|(?:[1-9]\d{0,3})(?:\.\d{1,2})?(?:px|fr))$/),
+          color: z.string().regex(/^#[a-fA-F0-9]{6}$/).optional(),
         }),
       )
       .max(16)

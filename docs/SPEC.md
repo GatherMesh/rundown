@@ -89,6 +89,8 @@ Autosave on blur / 600 ms debounce. Realtime: other editors' changes appear live
      Start, Duration, End, #, Title, Category, People, Notes, Script, Audio, Video, Lighting,
      Camera, Slides, Image slide. Width is `auto`, a px value, or `1fr`-style flex. In non-table
      styles, "columns" = which fields show and in what order.
+     Each column has an optional text colour, saved per template, with a reset to the layout default.
+     Cards and Dense Cards have a left accent in the item's category colour.
    - **Which items**: All items · Only the recipient's items · Recipient's items + one either side
      (neighbours render dimmed as context, as in `PackSpeaker.png`). Plus a category filter.
      Gaps between visible items show the omitted item numbers and duration.
