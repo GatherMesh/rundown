@@ -146,7 +146,7 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
     const packs: PackDocument[] = [],
       warnings = new Set<string>();
     const memoryCache = new Map<string, { bytes: Uint8Array; count: number }>();
-    for (const { person, session: sessionDoc } of jobs) {
+    for (const { person, session: sessionDoc, coverSheet } of jobs) {
       const session = sessionDoc.data(),
         items = sessionItems.get(sessionDoc.id)!;
       const documents = new Map<string, Uint8Array>(),
@@ -232,7 +232,7 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
           total: docsTotal,
         });
       }
-      const plan = planPack(person.pack, counts);
+      const plan = planPack(person.pack, counts, coverSheet);
       if (plan.sides.length > 1000)
         throw new HttpsError(
           'resource-exhausted',

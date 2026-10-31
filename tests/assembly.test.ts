@@ -2,7 +2,44 @@ import { it, expect } from 'vitest';
 import { PDFDocument, StandardFonts, PDFArray, PDFRawStream, decodePDFRawStream } from 'pdf-lib';
 import { assemblePacks } from '../functions/src/assemble';
 import { planPack } from '../app/src/render/domain';
+import { selectPackJobs } from '../app/src/render/pack-selection';
 import { defaultPack, type Person, type PackSettings } from '../app/src/types';
+
+it.each(['single', 'duplexLong', 'duplexShort'] as const)(
+  'assembles one person-wide cover with a blank back (%s)',
+  async (sides) => {
+    const source = await PDFDocument.create();
+    source.addPage([595.276, 841.89]).drawText('Session content');
+    const documents = new Map([['t', await source.save()]]);
+    const people: Person[] = ['a', 'b'].map((id) => ({
+      id,
+      name: `Person ${id}`,
+      pack: {
+        ...defaultPack(),
+        enabled: true,
+        sides,
+        coverSheet: true,
+        sessionIds: ['morning', 'evening'],
+        templates: [{ templateId: 't', copies: 1 }],
+      },
+    }));
+    const packs = selectPackJobs(people, [{ id: 'morning' }, { id: 'evening' }]).map((j) => ({
+      person: j.person,
+      plan: planPack(j.person.pack, { t: 1 }, j.coverSheet),
+      documents,
+      templates: [],
+      sessionName: j.session.id,
+      eventName: 'Whole event',
+      dateTime: 'Date',
+    }));
+    const pdf = await PDFDocument.load(await assemblePacks(packs, true));
+    expect(pdf.getPageCount()).toBe(12);
+    for (const index of [0, 6]) {
+      expect(pdf.getPage(index).node.Contents()).toBeDefined();
+      expect(pdf.getPage(index + 1).node.Contents()).toBeUndefined();
+    }
+  },
+);
 it('embeds every source page and preserves duplex sheet boundaries', async () => {
   const source = await PDFDocument.create();
   const font = await source.embedFont(StandardFonts.Helvetica);

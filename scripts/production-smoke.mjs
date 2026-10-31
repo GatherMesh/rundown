@@ -159,11 +159,13 @@ try {
     selection.update(ev.collection('people').doc(p.id), {
       'pack.enabled': ['margaret', 'josh'].includes(p.id),
       'pack.sessionIds': p.id === 'margaret' ? ['fri-opening', 'sat-evening'] : ['sat-evening'],
+      'pack.coverSheet': true,
     });
   await selection.commit();
-  for (const [name, expectedPages, expectedSheets] of [
-    ['renderPack', 12, 6],
-    ['renderAllPacks', 14, 7],
+  for (const [name, expectedPages, expectedSheets, sessionId] of [
+    ['renderPack', 14, 7],
+    ['renderAllPacks', 18, 9],
+    ['renderPack', 6, 3, 'sat-evening'],
   ]) {
     const response = await fetch(
       `https://australia-southeast1-${projectId}.cloudfunctions.net/${name}`,
@@ -171,7 +173,7 @@ try {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${signed.idToken}` },
         body: JSON.stringify({
-          data: { tenantId: tag, eventId, personId: 'margaret', jobId: randomUUID() },
+          data: { tenantId: tag, eventId, sessionId, personId: 'margaret', jobId: randomUUID() },
         }),
       },
     );
@@ -179,12 +181,16 @@ try {
     if (!response.ok || result.error) throw new Error(JSON.stringify(result));
     const bytes = await getBytes(ref(clientStorage, result.result.path));
     const pdf = await PDFDocument.load(bytes);
+    await writeFile(
+      `artifacts/production-${name}-${sessionId ?? 'person-covers'}.pdf`,
+      new Uint8Array(bytes),
+    );
     if (pdf.getPageCount() !== expectedPages || result.result.sheets !== expectedSheets)
       throw new Error('Unexpected multi-session counts: ' + JSON.stringify(result.result));
     console.log(
       JSON.stringify({
         function: name,
-        scope: 'selected sessions',
+        scope: sessionId ?? 'selected sessions',
         sheets: expectedSheets,
         pdfSides: pdf.getPageCount(),
       }),

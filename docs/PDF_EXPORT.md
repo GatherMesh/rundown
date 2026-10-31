@@ -121,8 +121,11 @@ without `sessionIds` include all sessions. Sessions are ordered by start time wi
    - **Sides**: `single` → 1 side per sheet. `duplexLong` → 2 sides per sheet.
      `duplexShort` → 2 sides per sheet, and in the combined job (always long-edge) every back side
      is rotated 180° to emulate short-edge flipping.
-   - **coverSheet** — prepend a cover side (name large, role, session, event, date & time, list of
-     contents "Producer Rundown ×2"). In duplex its back is blank.
+   - **coverSheet** — prepend one cover side per person before all their selected sessions,
+     showing name, role, event, selected-session count, first/last session date & time and templates
+     per session ("Producer Rundown ×2"). Its back is blank in duplex/combined jobs.
+     Only the first selected session’s plan receives the cover; later plans omit it. Individual
+     session previews and prints omit covers. Totals include one cover sheet per person.
    - **sheets** = number of sides ÷ (duplex ? 2 : 1), rounded up after padding.
 3. Impose with `pdf-lib` (`embedPage` + `drawPage` with scale/rotation), stamp footers
    ("copy x of n"), set viewer preferences (`Duplex: DuplexFlipLongEdge` or `Simplex`,

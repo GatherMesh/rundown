@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { includesSession, selectPackJobs } from '../app/src/render/pack-selection';
 import { defaultPack, type Person } from '../app/src/types';
+import { planPack, planCombinedJob } from '../app/src/render/domain';
 
 const sessions = [{ id: 'morning' }, { id: 'evening' }];
 const people: Person[] = [
@@ -44,3 +45,34 @@ it('keeps legacy all-session coverage, but new packs and explicit empty selectio
   expect(includesSession(defaultPack(), 'morning')).toBe(false);
   expect(selectPackJobs(people, sessions, 'd')).toEqual([]);
 });
+
+it.each(['single', 'duplexLong', 'duplexShort'] as const)(
+  'adds one cover per person across selected sessions (%s)',
+  (sides) => {
+    const recipients = people.map((p) => ({
+      ...p,
+      pack: { ...p.pack, sides, coverSheet: true, templates: [{ templateId: 't', copies: 1 }] },
+    }));
+    const jobs = selectPackJobs(recipients, sessions);
+    expect(jobs.map((j) => j.coverSheet)).toEqual([true, false, true]);
+    const packs = jobs.map((j) => ({
+      settings: j.person.pack,
+      plan: planPack(j.person.pack, { t: 1 }, j.coverSheet),
+    }));
+    expect(packs.reduce((n, p) => n + p.plan.sheets, 0)).toBe(5);
+    expect(planCombinedJob(packs)).toHaveLength(10);
+    expect(planCombinedJob(packs).filter((s) => s.kind === 'cover')).toHaveLength(2);
+    expect(selectPackJobs(recipients, sessions, 'c').map((j) => j.coverSheet)).toEqual([true]);
+    expect(selectPackJobs(recipients, sessions, 'a', 'evening')[0].coverSheet).toBe(false);
+    expect(
+      selectPackJobs(recipients, sessions, undefined, 'evening').every((j) => !j.coverSheet),
+    ).toBe(true);
+    expect(recipients[0].pack.coverSheet).toBe(true);
+    expect(
+      selectPackJobs(
+        [{ ...recipients[0], pack: { ...recipients[0].pack, coverSheet: false } }],
+        sessions,
+      ).every((j) => !j.coverSheet),
+    ).toBe(true);
+  },
+);

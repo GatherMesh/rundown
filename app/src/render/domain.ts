@@ -150,7 +150,11 @@ export function fitPagination(
   }
   return { pages: at(low), scale: low, warning: null };
 }
-export function planPack(settings: PackSettings, counts: Record<string, number>): PlannedPack {
+export function planPack(
+  settings: PackSettings,
+  counts: Record<string, number>,
+  coverSheet = settings.coverSheet,
+): PlannedPack {
   const sides: OutputSide[] = [];
   const duplex = settings.sides !== 'single';
   const capacity = settings.scaling === '4up' ? 4 : settings.scaling === '2up' ? 2 : 1;
@@ -166,7 +170,7 @@ export function planPack(settings: PackSettings, counts: Record<string, number>)
     flush();
     if (duplex && sides.length % 2) sides.push({ kind: 'blank' });
   };
-  if (settings.coverSheet) {
+  if (coverSheet) {
     sides.push({ kind: 'cover' });
     pad();
   }

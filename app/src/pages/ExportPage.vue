@@ -9,7 +9,7 @@ import { useWorkspace } from '../stores/workspace';
 import { payload } from '../render/payload';
 import { renderDocument } from '../render/renderer';
 import { computeItems, planPack } from '../render/domain';
-import { includesSession } from '../render/pack-selection';
+import { includesSession, selectPackJobs } from '../render/pack-selection';
 import type { Item, PackSettings, Person, Session } from '../types';
 const w = useWorkspace(),
   selected = ref('margaret'),
@@ -101,10 +101,10 @@ function sessionDate(s: Session) {
     timeStyle: 'short',
   }).format(s.startAt.toDate());
 }
-function plan(p: Person, sessionId = previewSession.value?.id) {
+function plan(p: Person, sessionId = previewSession.value?.id, coverSheet = false) {
   if (!sessionId || !counts.value[sessionId]?.[p.id]) return null;
   try {
-    return planPack(p.pack, counts.value[sessionId][p.id]);
+    return planPack(p.pack, counts.value[sessionId][p.id], coverSheet);
   } catch {
     return null;
   }
@@ -112,8 +112,8 @@ function plan(p: Person, sessionId = previewSession.value?.id) {
 function personTotals(p: Person) {
   let pages = 0,
     sheets = 0;
-  for (const session of enabledSessions(p)) {
-    const result = plan(p, session.id);
+  for (const { session, coverSheet } of selectPackJobs([p], w.sessions, p.id)) {
+    const result = plan(p, session.id, coverSheet);
     if (!result) return null;
     pages += result.pages;
     sheets += result.sheets;
@@ -652,7 +652,7 @@ const initials = (p: Person) =>
               @update:model-value="(v) => patch({ newSheetPerTemplate: v })"
             /><q-checkbox
               :model-value="person.pack.coverSheet"
-              label="Add a cover sheet with name"
+              label="Add one cover sheet for this person"
               @update:model-value="(v) => patch({ coverSheet: v })"
             />
           </div>
@@ -660,6 +660,10 @@ const initials = (p: Person) =>
       </fieldset>
       <section v-if="w.sessions.length" class="pack-sheet-layout">
         <h3>Sheet layout</h3>
+        <p v-if="person.pack.coverSheet && enabledSessions(person).length" class="muted">
+          One cover sheet for {{ person.name }} precedes all selected sessions in the full pack.
+          Individual session previews and prints contain only that session’s sheets.
+        </p>
         <q-select
           :model-value="previewSession?.id"
           :options="w.sessions"

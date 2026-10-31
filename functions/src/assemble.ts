@@ -80,10 +80,18 @@ export async function assemblePacks(packs: PackDocument[], combined: boolean): P
         let y = text('Session pack', height - 70, 14);
         y = text(pack.person.name, y - 24, 30);
         if (pack.person.role) y = text(pack.person.role, y - 6, 14);
-        y = text(pack.sessionName, y - 35, 20);
-        y = text(pack.eventName, y - 10, 14);
-        y = text(pack.dateTime, y - 10, 12);
+        const personPacks = packs.filter((p) => p.person.id === pack.person.id);
+        y = text(pack.eventName, y - 35, 20);
+        y = text(
+          `${personPacks.length} selected session${personPacks.length === 1 ? '' : 's'}`,
+          y - 10,
+          14,
+        );
+        y = text(personPacks[0].dateTime, y - 10, 12);
+        if (personPacks.length > 1)
+          y = text(`Through ${personPacks[personPacks.length - 1].dateTime}`, y - 10, 12);
         y -= 35;
+        y = text('Templates in each session', y, 14);
         for (const ref of pack.person.pack.templates)
           y = text(
             `${pack.templates.find((t) => t.id === ref.templateId)?.name ?? 'Template'} ×${ref.copies}`,

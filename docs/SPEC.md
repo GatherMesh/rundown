@@ -117,7 +117,7 @@ Autosave on blur / 600 ms debounce. Realtime: other editors' changes appear live
     The same templates and print settings apply to each checked session.
   - Sides: Single | Double · long edge | Double · short edge.
   - Scaling: Fit to A4 | Actual size | 2 per sheet | 4 per sheet.
-  - Options: Collate copies · Start each template on a new sheet · Add a cover sheet with name.
+  - Options: Collate copies · Start each template on a new sheet · Add one cover sheet for the person’s full pack.
   - Summary: total pages and sheets for the person's checked sessions. Preview all (PDF).
   - Sheet layout: a local session selector shows each sheet's front and back, identifying template,
     page, copy and blank sides. It changes only this layout preview, never the export selection.
@@ -125,6 +125,8 @@ Autosave on blur / 600 ms debounce. Realtime: other editors' changes appear live
 
 Pack settings and selected session IDs are stored **per event person**. Global Print All groups
 packs by person, then chronological session, with every session pack starting on a new sheet.
+A cover sheet is added once per person before their selected sessions, and is included once in their
+total sheets. Individual session previews and prints omit the cover.
 Existing packs without session IDs include all sessions; new packs start with none selected.
 
 ### 4.4 People page (not designed — follow the same visual system)

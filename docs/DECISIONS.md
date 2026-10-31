@@ -1,5 +1,9 @@
 # Implementation decisions
 
+- Cover sheets belong to the person’s full pack: one before all selected sessions, with the
+  event, session count/date range and templates per session. Individual session exports omit
+  covers. The Export summary counts the cover once, separately from session-only sheet counts.
+
 - Cards and Dense Cards use the category's existing foreground colour for a 4 px left accent,
   including compact context neighbours. Per-template column `color` overrides text (labels and
   values) in all styles; omitted/reset colours preserve layout defaults. Accents remain category-based

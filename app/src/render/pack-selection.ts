@@ -10,12 +10,16 @@ export function selectPackJobs<T extends { id: string }>(
   sessions: T[],
   personId?: string,
   sessionId?: string,
-): { person: Person; session: T }[] {
+): { person: Person; session: T; coverSheet: boolean }[] {
   return people
     .filter((p) => (personId ? p.id === personId : p.pack.enabled))
     .flatMap((person) =>
       sessions
         .filter((s) => (!sessionId || s.id === sessionId) && includesSession(person.pack, s.id))
-        .map((session) => ({ person, session })),
+        .map((session, index) => ({
+          person,
+          session,
+          coverSheet: person.pack.coverSheet && !sessionId && index === 0,
+        })),
     );
 }
