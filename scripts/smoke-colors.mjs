@@ -68,10 +68,14 @@ try {
         const row = root.querySelector('.recipient-row');
         const colored = [...row.querySelectorAll('[style*="--column-color"]')];
         return {
-          accents: [...root.querySelectorAll('.print-category-accent')].map((el) => ({
-            color: getComputedStyle(el).borderLeftColor,
-            width: getComputedStyle(el).borderLeftWidth,
-          })),
+          accents: [...root.querySelectorAll('.print-category-accent, .print-table-accent')].map((el) => {
+            const style = getComputedStyle(el, itemStyle === 'table' ? '::before' : null);
+            return {
+              color: itemStyle === 'table' ? style.backgroundColor : style.borderLeftColor,
+              width: itemStyle === 'table' ? style.width : style.borderLeftWidth,
+              height: parseFloat(style.height),
+            };
+          }),
           title: getComputedStyle(row.querySelector('h2, b')).color,
           category: row.querySelector('.print-category') ? getComputedStyle(row.querySelector('.print-category')).color : null,
           colored: colored.length,
@@ -90,8 +94,9 @@ try {
       assert.equal(result.background, 'rgb(238, 243, 255)', 'recipient tint stays visible');
       assert.equal(result.injected, false, 'reject malformed colours at render time');
       assert.ok(result.pages > 0);
-      if (itemStyle === 'cards' || itemStyle === 'denseCards') {
-        assert.deepEqual(result.accents.map((a) => a.width), ['4px', '4px', '4px']);
+      if (['table', 'cards', 'denseCards'].includes(itemStyle)) {
+        assert.deepEqual(result.accents.map((a) => a.width), Array(3).fill(itemStyle === 'table' ? '3px' : '4px'));
+        if (itemStyle === 'table') assert.ok(result.accents.every((a) => a.height > 0 && a.height <= 24));
         assert.deepEqual(result.accents.map((a) => a.color), mode === 'invalid'
           ? Array(3).fill('rgb(91, 98, 112)')
           : ['rgb(28, 122, 71)', 'rgb(164, 81, 14)', 'rgb(107, 52, 201)']);

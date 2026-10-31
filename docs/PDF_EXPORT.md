@@ -63,6 +63,8 @@ each template document, restarting for each template/copy (not across the assemb
   - `table` — one row per item, header row repeated on each page, visible columns in order,
     widths from the template (`auto` → content, `px`, `fr`). Title cell shows category as a small
     caps line underneath. Rows ≥ 1 px rules. Recipient rows get a light tint (#F3F5F8).
+    Each row (including compact context neighbours) has a small 3 px category-coloured bar on
+    the left, up to 24 px tall and inset 6 px from the top. Column headings align with the inset row content.
   - `cards` — one bordered card per item: category · item no., title, start/length/finish,
     then each visible field as a labelled block; image slide as a 16:9 thumbnail. Context items
     render as a single compact line. Cards and their context lines have a 4 px left border in the

@@ -452,3 +452,22 @@
 .print-category-accent {
   border-left: 4px solid var(--category-accent, #5b6270);
 }
+
+.print-table-head,
+.print-table-row {
+  padding-left: 10px;
+}
+.print-table-accent {
+  position: relative;
+}
+.print-table-accent::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 3px;
+  height: 24px;
+  max-height: calc(100% - 12px);
+  border-radius: 2px;
+  background: var(--category-accent, #5b6270);
+}
