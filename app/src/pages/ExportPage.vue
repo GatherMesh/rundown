@@ -68,6 +68,21 @@ const previewSession = computed(
 function enabledSessions(p: Person) {
   return w.sessions.filter((s) => includesSession(p.pack, s.id));
 }
+const sessionItemsReady = computed(() =>
+  w.sessions.every((s) => sessionItems.value[s.id] !== undefined),
+);
+function enableParticipatingSessions() {
+  const p = person.value;
+  if (!p || !w.canEdit || busy.value || !sessionItemsReady.value) return;
+  const sessionIds = w.sessions
+    .filter((s) => sessionItems.value[s.id].some((item) => item.personIds.includes(p.id)))
+    .map((s) => s.id);
+  if (sessionIds.length > 100) {
+    Notify.create({ type: 'warning', message: 'Choose up to 100 sessions per person.' });
+    return;
+  }
+  patch({ sessionIds });
+}
 function toggleSession(sessionId: string, enabled: boolean) {
   if (!person.value) return;
   const ids = new Set(enabledSessions(person.value).map((s) => s.id));
@@ -469,6 +484,14 @@ const initials = (p: Person) =>
       <section class="pack-sessions">
         <h3>Sessions for {{ person.name }}</h3>
         <p class="muted">Tick the sessions they receive sheets for.</p>
+        <q-btn
+          outline
+          no-caps
+          label="Enable All Participating Sessions"
+          class="full-width q-mb-sm"
+          :disable="!w.canEdit || busy || !w.sessions.length || !sessionItemsReady"
+          @click="enableParticipatingSessions"
+        />
         <div v-for="session in w.sessions" :key="session.id" class="pack-session-row">
           <q-checkbox
             :model-value="includesSession(person.pack, session.id)"
