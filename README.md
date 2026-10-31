@@ -65,6 +65,8 @@ firebase deploy --project gathermesh-rundown --only hosting,firestore,storage,fu
 
 Functions predeploy builds both the application and the standalone print document. Do not exclude every directory named `src` from function uploads: the bundled print document lives at `functions/print/src/render/print.html`.
 
+If an initial function creation fails and a retry leaves the new `api` or `deleteSession` endpoint returning Cloud Run 403 errors, run `node scripts/cloud-setup.mjs functions-access` to restore browser invocation. The handlers still enforce Firebase authentication and tenant roles; this only allows requests to reach them.
+
 Storage rules check tenant membership in Firestore. Provision the required service-agent access with `node scripts/cloud-setup.mjs storage-rules-access`; non-interactive Firebase deployments skip this IAM setup. This grants only `roles/firebaserules.firestoreServiceAgent` to the project's Firebase Storage service agent. Run `node scripts/production-smoke.mjs` to verify exports through the signed-in client Storage SDK, including denial for non-members and signed-out users. The smoke test creates and removes its own isolated QA tenant and user.
 
 Google sign-in is configured in `firebase.json`; email-link sign-in is enabled in the Firebase project. `scripts/cloud-setup.mjs` records the provisioning calls, using an existing authenticated Firebase CLI session in memory. It never stores access tokens. The Storage bucket CORS allowlist permits the two Firebase Hosting domains and localhost:9000.

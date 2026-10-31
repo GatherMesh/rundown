@@ -28,6 +28,26 @@ async function api(url, options = {}) {
   return json;
 }
 const mode = process.argv[2];
+if (mode === 'functions-access') {
+  for (const name of ['api', 'deleteSession']) {
+    const fn = await api(
+      `https://cloudfunctions.googleapis.com/v2/projects/${project}/locations/australia-southeast1/functions/${name}`,
+    );
+    const endpoint = `https://run.googleapis.com/v2/${fn.serviceConfig.service}`;
+    const policy = await api(`${endpoint}:getIamPolicy?options.requestedPolicyVersion=3`);
+    policy.bindings ??= [];
+    let binding = policy.bindings.find((b) => b.role === 'roles/run.invoker' && !b.condition);
+    if (!binding) policy.bindings.push((binding = { role: 'roles/run.invoker', members: [] }));
+    if (!binding.members.includes('allUsers')) {
+      binding.members.push('allUsers');
+      await api(`${endpoint}:setIamPolicy`, {
+        method: 'POST',
+        body: JSON.stringify({ policy }),
+      });
+    }
+    console.log(`${name}: browser invocation enabled; Firebase authentication is enforced by the handler.`);
+  }
+}
 if (mode === 'storage-rules-access') {
   const info = await api(`https://cloudresourcemanager.googleapis.com/v1/projects/${project}`);
   const endpoint = `https://cloudresourcemanager.googleapis.com/v1/projects/${project}`;
