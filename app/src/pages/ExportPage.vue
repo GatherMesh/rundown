@@ -25,6 +25,32 @@ const w = useWorkspace(),
   pdfUrl = ref(''),
   pdfOpen = ref(false);
 const person = computed(() => w.people.find((p) => p.id === selected.value) ?? w.people[0]);
+const duplicateOpen = ref(false),
+  duplicateSourceId = ref(''),
+  duplicateTargetId = ref('');
+const duplicateSource = computed(() => w.people.find((p) => p.id === duplicateSourceId.value));
+const duplicateTargets = computed(() => w.people.filter((p) => p.id !== duplicateSourceId.value));
+watch(
+  () => [w.tenantId, w.eventId],
+  () => {
+    duplicateOpen.value = false;
+  },
+);
+function openDuplicate() {
+  if (!person.value) return;
+  duplicateSourceId.value = person.value.id;
+  duplicateTargetId.value = '';
+  duplicateOpen.value = true;
+}
+function duplicateConfig() {
+  try {
+    w.duplicatePack(duplicateSourceId.value, duplicateTargetId.value);
+    selected.value = duplicateTargetId.value;
+    duplicateOpen.value = false;
+  } catch (e) {
+    w.fail(e);
+  }
+}
 const sidesOptions = [
   { label: 'Single', value: 'single' },
   { label: 'Double · long edge', value: 'duplexLong' },
@@ -431,6 +457,15 @@ const initials = (p: Person) =>
           >
         </div>
       </div>
+      <q-btn
+        outline
+        no-caps
+        icon="content_copy"
+        label="Duplicate config"
+        class="full-width q-mb-md"
+        :disable="!w.canEdit || busy || w.people.length < 2"
+        @click="openDuplicate"
+      />
       <section class="pack-sessions">
         <h3>Sessions for {{ person.name }}</h3>
         <p class="muted">Tick the sessions they receive sheets for.</p>
@@ -501,10 +536,7 @@ const initials = (p: Person) =>
               <strong>{{
                 w.templates.find((t) => t.id === r.templateId)?.name || 'Missing template'
               }}</strong
-              ><small
-                >{{ w.templates.find((t) => t.id === r.templateId)?.orientation }} · same templates
-                for each selected session</small
-              >
+              ><small>{{ w.templates.find((t) => t.id === r.templateId)?.orientation }}</small>
             </div>
             <div class="copies-control">
               <button
@@ -677,6 +709,44 @@ const initials = (p: Person) =>
       </div>
     </aside>
   </div>
+  <q-dialog v-model="duplicateOpen">
+    <q-card class="dialog-card">
+      <q-card-section>
+        <h2>Duplicate export config</h2>
+        <p>Copy {{ duplicateSource?.name }}’s configuration to another person in this event.</p>
+        <q-select
+          v-model="duplicateTargetId"
+          :options="duplicateTargets"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          outlined
+          dense
+          label="Copy to person"
+        />
+        <p class="muted q-mt-md">
+          This replaces their selected sessions, templates, copy counts, print settings and Print
+          All toggle. Their name and item assignments stay the same.
+        </p>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat no-caps label="Cancel" v-close-popup />
+        <q-btn
+          color="primary"
+          no-caps
+          label="Replace config"
+          :disable="
+            !w.canEdit ||
+            busy ||
+            !duplicateSource ||
+            !duplicateTargets.some((p) => p.id === duplicateTargetId)
+          "
+          @click="duplicateConfig"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
   <q-dialog v-model="pdfOpen" maximized
     ><q-card class="pdf-dialog"
       ><q-card-section class="section-heading"

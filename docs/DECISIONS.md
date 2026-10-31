@@ -1,5 +1,10 @@
 # Implementation decisions
 
+- Duplicating an export config replaces another existing event person's complete pack settings,
+  including session selection and enabled state, after choosing the recipient in a replacement
+  dialog. It does not duplicate the person or item assignments. Legacy all-session selection is
+  preserved; copied arrays are independent. The copied pack uses the recipient's name and items.
+
 - Export selection is per person via `pack.sessionIds`; no global session selection. Omitted IDs preserve all-session coverage for legacy packs, while new packs start with `[]`. Editing the checkboxes saves an explicit list, so future sessions require selection. Deleted/moved-away IDs are ignored. The existing person enable switch controls global Print All only. Both global Print All and Print all for person group sessions chronologically and use the combined long-edge duplex assembly, with a fresh sheet for every session pack.
 
 - Templates can show the header on all pages or only the first; existing templates default to all. Later pages reclaim the header space. Every page retains "Page x of y" in its footer, numbered within that template document rather than across copies, cover sheets or the assembled pack.

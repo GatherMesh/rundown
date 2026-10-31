@@ -105,6 +105,9 @@ Autosave on blur / 600 ms debounce. Realtime: other editors' changes appear live
   The enable switch controls inclusion in global Print All; individual print actions remain available.
   Click a row to edit that person's pack in the side panel.
 - **Side panel — pack settings for the selected person**
+  - Duplicate config: choose another person in this event and replace their entire export
+    configuration, including selected sessions and the Print All toggle. The recipient keeps
+    their identity and item assignments; subsequent config edits are independent.
   - Sessions: checkbox per event session, with its name, event-local date/time and computed sheets.
     Preview and Print on each checked session produce just that person's sheets for that session.
     **Print all for person** produces every checked session in chronological order in one PDF.

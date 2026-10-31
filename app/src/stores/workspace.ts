@@ -331,6 +331,14 @@ export const useWorkspace = defineStore('workspace', () => {
     if (p) Object.assign(p, patch);
     edit(`${eventPath()}/people/${id}`, patch);
   }
+  function duplicatePack(sourceId: string, targetId: string) {
+    if (!canEdit.value) throw new Error('Editor access required.');
+    const source = people.value.find((p) => p.id === sourceId);
+    const target = people.value.find((p) => p.id === targetId);
+    if (!source || !target || sourceId === targetId)
+      throw new Error('Choose another person in this event.');
+    patchPerson(targetId, { pack: JSON.parse(JSON.stringify(source.pack)) });
+  }
   function patchCategory(id: string, patch: Partial<Category>) {
     const c = categories.value.find((c) => c.id === id);
     if (c) Object.assign(c, patch);
@@ -684,6 +692,7 @@ export const useWorkspace = defineStore('workspace', () => {
     patchSession,
     patchTemplate,
     patchPerson,
+    duplicatePack,
     patchCategory,
     addItem,
     removeItem,
