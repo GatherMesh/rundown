@@ -64,28 +64,55 @@ function header(p: RenderPayload) {
         return '';
     }
   };
-  const centeredLogo = p.template.header.logo.show && p.template.header.logo.align === 'center';
-  const alignments = centeredLogo
-    ? (['left', 'center', 'right'] as const)
-    : (['left', 'right'] as const);
-  return `<header class="print-header${centeredLogo ? ' print-header-centered-logo' : ''}">${alignments
-    .map(
-      (align) =>
-        `<div class="print-header-${align}">${(
-          [
-            'logo',
-            'sessionName',
-            'eventName',
-            'sessionSubtitle',
-            'personName',
-            'sessionDateTime',
-          ] as const
-        )
-          .filter((key) => p.template.header[key].show && p.template.header[key].align === align)
-          .map((key) => value(key))
-          .join('')}</div>`,
-    )
-    .join('')}</header>`;
+  const logo = p.template.header.logo;
+  const groups = (['left', 'right'] as const).map(
+    (align) =>
+      `<div class="print-header-${align} print-header-text">${(
+        ['sessionName', 'eventName', 'sessionSubtitle', 'personName', 'sessionDateTime'] as const
+      )
+        .filter((key) => p.template.header[key].show && p.template.header[key].align === align)
+        .map((key) => value(key))
+        .join('')}</div>`,
+  );
+  if (logo.show)
+    groups.splice(
+      logo.align === 'left' ? 0 : logo.align === 'center' ? 1 : 2,
+      0,
+      `<div class="print-header-logo">${value('logo')}</div>`,
+    );
+  return `<header class="print-header${logo.show ? ` print-header-logo-${logo.align}` : ''}">${groups.join('')}</header>`;
+}
+
+function fitHeader(header: HTMLElement, alignment: Template['header']['logo']['align']) {
+  const slot = header.querySelector<HTMLElement>('.print-header-logo');
+  if (!slot) return;
+  const texts = [...header.querySelectorAll<HTMLElement>('.print-header-text')];
+  const width = header.clientWidth;
+  // Reserve a minimum logo slot; long text wraps instead of squeezing the logo away.
+  const maxTextWidth = (width - 48 - 56) / 2;
+  const widths = texts.map((text) => {
+    text.style.width = 'max-content';
+    text.style.maxWidth = `${maxTextWidth}px`;
+    return text.getBoundingClientRect().width;
+  });
+  if (widths.every((width) => width === 0)) {
+    texts.forEach((text) => text.remove());
+    header.style.gridTemplateColumns = '1fr';
+    return;
+  }
+  if (alignment === 'center') {
+    const sideWidth = Math.max(...widths);
+    header.style.gridTemplateColumns = `${sideWidth}px minmax(0, 1fr) ${sideWidth}px`;
+  } else {
+    const image = slot.querySelector('img');
+    const height = Math.max(56, ...texts.map((text) => text.getBoundingClientRect().height));
+    const ratio = image?.naturalHeight ? image.naturalWidth / image.naturalHeight : 1;
+    const logoWidth = Math.min(height * ratio, width - 48 - widths[0] - widths[1]);
+    header.style.gridTemplateColumns =
+      alignment === 'left'
+        ? `${logoWidth}px minmax(0, 1fr) auto`
+        : `minmax(0, 1fr) auto ${logoWidth}px`;
+  }
 }
 function cell(p: RenderPayload, item: ComputedItem, key: ColumnKey): string {
   if (key === 'start' || key === 'end')
@@ -210,11 +237,14 @@ export async function renderDocument(p: RenderPayload): Promise<RenderResult> {
   measure.style.height = `${height}px`;
   document.body.append(measure);
   try {
-    const head = header(p),
-      th = tableHead(p);
+    let head = header(p);
+    const th = tableHead(p);
     measure.innerHTML = `${head}<div class="print-body">${th}<div class="measure-blocks"></div></div>`;
     await readyImages(measure);
-    const headerHeight = measure.querySelector('.print-header')!.getBoundingClientRect().height;
+    const measuredHeader = measure.querySelector<HTMLElement>('.print-header')!;
+    fitHeader(measuredHeader, p.template.header.logo.align);
+    head = measuredHeader.outerHTML;
+    const headerHeight = measuredHeader.getBoundingClientRect().height;
     const tableHeight =
       measure.querySelector('.print-table-head')?.getBoundingClientRect().height ?? 0;
     const available = height - 88 - headerHeight - 16 - 36 - tableHeight;
@@ -285,7 +315,8 @@ export async function renderDocument(p: RenderPayload): Promise<RenderResult> {
       const capacity = Math.min(subsequentAvailable, pageCapacity(index) / result.scale);
       indices.forEach((i) => {
         if (heights[i] > capacity)
-          htmls[i] = `<div class="print-clipped" style="height:${capacity - 12}px">${htmls[i]}<span class="clip-notice">⋯ continues in app</span></div>`;
+          htmls[i] =
+            `<div class="print-clipped" style="height:${capacity - 12}px">${htmls[i]}<span class="clip-notice">⋯ continues in app</span></div>`;
       });
     });
     const runtime = p.items.at(-1)?.endSec ?? 0;

@@ -36,3 +36,5 @@
 - The avatar menu exports user credentials for API/MCP access. Credential files contain refresh tokens, are ignored by Git, and can be revoked through recent-sign-in-only session revocation. API image uploads generate the same preview download URLs as app uploads.
 
 - Logo placement supports Centre (`center`), placing the logo or tenant-name fallback at the horizontal centre of the header between equal-width text groups. Other header fields retain Left/Right placement; hidden logos retain the existing two-column layout.
+
+- Header logos preserve their aspect ratio and fit the height set by the visible text (or the existing minimum header height), limited by the remaining width. Long text wraps while reserving a minimum 56 px logo slot. Left/right logos sit alongside the text in both page orientations; centred logos remain at the page centre. The logo itself never increases header height.

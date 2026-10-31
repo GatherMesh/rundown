@@ -46,6 +46,7 @@ The seeded local account is `producer@example.com` / `rundown-demo`. These crede
 npm run typecheck
 npm test
 npm run test:rules
+npm run test:render
 npm run build
 ```
 

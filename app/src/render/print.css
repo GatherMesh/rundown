@@ -45,6 +45,7 @@
 .print-header-right {
   text-align: right;
   max-width: 42%;
+  justify-self: end;
 }
 .print-prepared {
   font-size: 10px;
@@ -56,51 +57,56 @@
   color: #5b6270;
   margin-top: 4px;
 }
+.print-header-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.print-header-logo-left,
+.print-header-logo-center,
+.print-header-logo-right {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.print-header-logo {
+  position: relative;
+  min-width: 0;
+}
+.print-header-logo ~ .print-header-right,
+.print-header-logo-right .print-header-right {
+  max-width: none;
+}
+.print-logo,
+.print-logo-text {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
 .print-logo {
-  max-width: 80px;
-  max-height: 50px;
   object-fit: contain;
-  float: left;
-  margin: 0 14px 8px 0;
+}
+.print-header-logo-left .print-logo {
+  object-position: left center;
+}
+.print-header-logo-right .print-logo {
+  object-position: right center;
 }
 .print-logo-text {
-  float: left;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 50px;
+  height: 50px;
+  max-width: 100%;
+  max-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
-  background: #eef0f3;
-  width: 50px;
-  height: 50px;
-  margin: 0 14px 8px 0;
-  border-radius: 5px;
-}
-.portrait .print-logo-text,
-.portrait .print-logo {
-  float: none;
-  margin-bottom: 14px;
-}
-.print-header-centered-logo {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-}
-.print-header-centered-logo > div {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.print-header-centered-logo .print-header-right {
-  max-width: none;
-}
-.print-header-center .print-logo,
-.print-header-center .print-logo-text {
-  display: block;
-  float: none;
-  margin: 0 auto 8px;
-}
-.print-header-center .print-logo-text {
-  display: flex;
   text-align: center;
+  overflow-wrap: anywhere;
+  background: #eef0f3;
+  border-radius: 5px;
 }
 .print-body {
   overflow: hidden;
