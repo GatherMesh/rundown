@@ -297,6 +297,7 @@ function removeTemplate() {
                 @change="header(key, 'align', ($event.target as HTMLSelectElement).value)"
               >
                 <option value="left">Left</option>
+                <option v-if="key === 'logo'" value="center">Centre</option>
                 <option value="right">Right</option>
               </select>
             </div>

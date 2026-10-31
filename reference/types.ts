@@ -162,7 +162,12 @@ export interface Template {
   paper: 'A4';
   pageMode: { kind: 'flow' } | { kind: 'fit'; pages: number };
   headerPages?: 'all' | 'first'; // omitted = all pages for existing templates
-  header: Record<HeaderField, { show: boolean; align: 'left' | 'right' }>;
+  header: {
+    [K in HeaderField]: {
+      show: boolean;
+      align: K extends 'logo' ? 'left' | 'center' | 'right' : 'left' | 'right';
+    };
+  };
   itemStyle: ItemStyle;
   columns: TemplateColumn[];
   filter: { scope: 'all' | 'recipient' | 'recipientPlusNeighbours'; categoryIds: string[] | null };

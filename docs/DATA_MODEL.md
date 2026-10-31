@@ -75,7 +75,7 @@ Use fractional `order` keys so a drag only writes one document.
   paper: 'A4',
   pageMode: { kind: 'flow' } | { kind: 'fit', pages: number },
   headerPages?: 'all'|'first', // omitted = all pages
-  header: Record<HeaderField, { show: boolean, align: 'left'|'right' }>,
+  header: { [K in HeaderField]: { show: boolean, align: K extends 'logo' ? 'left'|'center'|'right' : 'left'|'right' } },
   itemStyle: 'table'|'cards'|'denseCards'|'cueCard'|'compact',
   columns: { key: ColumnKey, visible: boolean, width: 'auto' | `${number}px` | `${number}fr` }[],
   filter: { scope: 'all'|'recipient'|'recipientPlusNeighbours', categoryIds: string[] | null },

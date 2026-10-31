@@ -54,7 +54,7 @@ Table column headings still repeat. Footer page numbers appear on every page and
 each template document, restarting for each template/copy (not across the assembled pack).
 
 - **Header**: fields per `template.header`; left group = logo + session name (h1) + event/subtitle
-  line; right group = "Prepared for" + person name + date & time. Hidden fields collapse.
+  line; right group = "Prepared for" + person name + date & time. Hidden fields collapse. Centre logo placement uses a middle column between equal-width left/right text groups.
 - **Footer**: `{template name} · copy x of n` · `Runtime h:mm:ss · ends h:mm am` · `Page x of y`.
 - **Item styles**
   - `table` — one row per item, header row repeated on each page, visible columns in order,

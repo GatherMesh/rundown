@@ -34,3 +34,5 @@
 - Add an authenticated HTTP operation API as an explicit expansion beyond PDF-only Cloud Functions. A local stdio MCP server calls that API with Firebase user credentials; both surfaces share strict input schemas and tenant roles. Remote MCP/OAuth hosting is outside this change.
 - API mutations use transactions, validate references and maintain session item counts. They are limited to 450 writes/scanned records, with empty-only event/tenant deletion and no recursive tenant purge. API timestamps are ISO 8601; stored timestamps remain Firestore Timestamp values.
 - The avatar menu exports user credentials for API/MCP access. Credential files contain refresh tokens, are ignored by Git, and can be revoked through recent-sign-in-only session revocation. API image uploads generate the same preview download URLs as app uploads.
+
+- Logo placement supports Centre (`center`), placing the logo or tenant-name fallback at the horizontal centre of the header between equal-width text groups. Other header fields retain Left/Right placement; hidden logos retain the existing two-column layout.

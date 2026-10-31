@@ -64,7 +64,11 @@ function header(p: RenderPayload) {
         return '';
     }
   };
-  return `<header class="print-header">${(['left', 'right'] as const)
+  const centeredLogo = p.template.header.logo.show && p.template.header.logo.align === 'center';
+  const alignments = centeredLogo
+    ? (['left', 'center', 'right'] as const)
+    : (['left', 'right'] as const);
+  return `<header class="print-header${centeredLogo ? ' print-header-centered-logo' : ''}">${alignments
     .map(
       (align) =>
         `<div class="print-header-${align}">${(

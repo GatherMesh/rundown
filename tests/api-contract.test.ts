@@ -171,3 +171,26 @@ it('checks image bytes, not only declared MIME type', () => {
   ).toThrow();
   expect(() => decodeImage('invalid!', 'image/png')).toThrow();
 });
+
+it.each(['left', 'center', 'right', 'invalid'])(
+  'validates logo placement %s on create and update',
+  (align) => {
+    const { id, ...data } = seed.templates[0];
+    const header = { ...data.header, logo: { show: true, align } };
+    expect(
+      operations.templates_create.schema.safeParse({ tenantId: 'a', data: { ...data, header } })
+        .success,
+    ).toBe(align !== 'invalid');
+    expect(
+      operations.templates_update.schema.safeParse({ tenantId: 'a', id, data: { header } }).success,
+    ).toBe(align !== 'invalid');
+  },
+);
+it('keeps centre placement exclusive to the logo', () => {
+  const { id, ...data } = seed.templates[0];
+  const header = { ...data.header, sessionName: { show: true, align: 'center' } };
+  expect(
+    operations.templates_create.schema.safeParse({ tenantId: 'a', data: { ...data, header } })
+      .success,
+  ).toBe(false);
+});

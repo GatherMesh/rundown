@@ -95,7 +95,7 @@ export const recordSchemas = {
       sessionName: headerField,
       eventName: headerField,
       sessionDateTime: headerField,
-      logo: headerField,
+      logo: headerField.extend({ align: z.enum(['left', 'center', 'right']) }),
       sessionSubtitle: headerField,
       personName: headerField,
     }),

@@ -81,6 +81,27 @@
   float: none;
   margin-bottom: 14px;
 }
+.print-header-centered-logo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+.print-header-centered-logo > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.print-header-centered-logo .print-header-right {
+  max-width: none;
+}
+.print-header-center .print-logo,
+.print-header-center .print-logo-text {
+  display: block;
+  float: none;
+  margin: 0 auto 8px;
+}
+.print-header-center .print-logo-text {
+  display: flex;
+  text-align: center;
+}
 .print-body {
   overflow: hidden;
 }
