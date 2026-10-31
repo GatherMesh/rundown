@@ -128,6 +128,7 @@ export interface ComputedItem extends Item {
   isRecipientItem?: boolean;
 }
 
+// sessionSubtitle is the persisted key for Template name, preserving saved header settings.
 export type HeaderField =
   'sessionName' | 'eventName' | 'sessionDateTime' | 'logo' | 'sessionSubtitle' | 'personName';
 export type ItemStyle = 'table' | 'cards' | 'denseCards' | 'cueCard' | 'compact';

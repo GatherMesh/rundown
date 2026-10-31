@@ -82,7 +82,7 @@ Autosave on blur / 600 ms debounce. Realtime: other editors' changes appear live
    - **Page**: Orientation (Portrait / Landscape segmented), Paper (A4, locked), Page count
      (*Flow onto as many pages as needed* | *Fit to N pages*).
    - **Header**: Show header on All pages (default) or First page only. Six toggles, each with a position (Left/Right; Logo also supports Centre): Session name, Event name,
-     Session date & time, Logo, Session subtitle, **Person name** (filled per recipient at export).
+     Session date & time, Logo, Template name (the template's name, e.g. “Musicians View”), **Person name** (filled per recipient at export).
      Every rendered page has a footer numbered "Page x of y" within that template document.
    - **Item style**: Table rows | Cards | Dense Cards | Cue card (one item per block, large script) | Compact list.
    - **Columns** (ordered, drag to reorder, each with a visible checkbox and width):

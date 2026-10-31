@@ -83,6 +83,8 @@ Use fractional `order` keys so a drag only writes one document.
 }
 ```
 `HeaderField` = `sessionName | eventName | sessionDateTime | logo | sessionSubtitle | personName`.
+`sessionSubtitle` is the legacy persisted key for the **Template name** header option; it renders
+`template.name`, preserving existing templates' visibility and alignment settings.
 `ColumnKey` = `start | duration | end | number | title | category | people | notes | script |
 audio | video | lighting | camera | slides | imageSlide`.
 

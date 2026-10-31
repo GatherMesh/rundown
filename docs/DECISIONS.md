@@ -1,5 +1,10 @@
 # Implementation decisions
 
+- Template name replaces Session subtitle in the print header and uses the template's existing
+  editable name. Keep the persisted `header.sessionSubtitle` key so saved visibility/alignment
+  settings and API clients continue to work without a data migration; session subtitles remain
+  editable on sessions but no longer print in this header slot.
+
 - Cover sheets belong to the person’s full pack: one before all selected sessions, with the
   event, session count/date range and templates per session. Individual session exports omit
   covers. The Export summary counts the cover once, separately from session-only sheet counts.

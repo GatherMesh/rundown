@@ -53,7 +53,7 @@ leave the full body space available on subsequent pages, including fit mode and 
 Table column headings still repeat. Footer page numbers appear on every page and count within
 each template document, restarting for each template/copy (not across the assembled pack).
 
-- **Header**: fields per `template.header`; left group = logo + session name (h1) + event/subtitle
+- **Header**: fields per `template.header`; left group = logo + session name (h1) + event/template name
   line; right group = "Prepared for" + person name + date & time. Hidden fields collapse. Centre logo placement uses a middle column between equal-width left/right text groups.
 - **Footer**: `{template name} · copy x of n` · `Runtime h:mm:ss · ends h:mm am` · `Page x of y`.
 - **Item styles**

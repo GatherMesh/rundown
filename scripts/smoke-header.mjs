@@ -22,6 +22,39 @@ try {
   await page.goto(pathToFileURL(resolve('functions/print/src/render/print.html')).href);
   await page.waitForFunction(() => typeof window.renderRundown === 'function');
   await mkdir('artifacts', { recursive: true });
+  for (const align of ['left', 'right']) {
+    for (const show of [true, false]) {
+      const name = 'Musicians View <band> & singers';
+      const result = await page.evaluate(async ({ seed, align, show, name }) => {
+        const template = structuredClone(seed.templates[0]);
+        template.name = name;
+        template.header.sessionSubtitle = { show, align };
+        await window.renderRundown({
+          tenant: { name: 'QCEC' },
+          event: { name: 'Event', timeZone: 'Australia/Brisbane' },
+          session: {
+            name: 'Session',
+            subtitle: 'Old session subtitle',
+            startAt: seed.sessions[0].startAt,
+          },
+          recipient: null,
+          template,
+          items: [],
+        });
+        if (window.__RENDER_ERROR) throw new Error(window.__RENDER_ERROR);
+        const header = document.querySelector('.print-header');
+        const nameElement = header.querySelector(`.print-header-${align} .print-subtitle`);
+        return {
+          name: nameElement?.textContent ?? null,
+          childCount: nameElement?.childElementCount ?? 0,
+          text: header.textContent,
+        };
+      }, { seed, align, show, name });
+      assert.equal(result.name, show ? name : null, 'template name respects visibility and alignment');
+      assert.equal(result.childCount, 0, 'template names are escaped as text');
+      assert.ok(!result.text.includes('Old session subtitle'), 'session subtitle is replaced');
+    }
+  }
   let checked = 0;
   for (const orientation of ['portrait', 'landscape']) {
     for (const align of ['left', 'center', 'right']) {

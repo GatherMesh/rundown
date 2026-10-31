@@ -35,7 +35,7 @@ const headers: Record<HeaderField, string> = {
   eventName: 'Event name',
   sessionDateTime: 'Session date & time',
   logo: 'Logo',
-  sessionSubtitle: 'Session subtitle',
+  sessionSubtitle: 'Template name',
   personName: 'Person name',
 };
 const usage = computed(

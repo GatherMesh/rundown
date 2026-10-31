@@ -47,9 +47,7 @@ function header(p: RenderPayload) {
       case 'eventName':
         return `<div>${escape(p.event.name)}</div>`;
       case 'sessionSubtitle':
-        return p.session.subtitle
-          ? `<div class="print-subtitle">${escape(p.session.subtitle)}</div>`
-          : '';
+        return `<div class="print-subtitle">${escape(p.template.name)}</div>`;
       case 'personName':
         return `<div class="print-prepared">Prepared for</div><h2>${escape(p.recipient?.name ?? '[Person name]')}</h2>`;
       case 'sessionDateTime':
