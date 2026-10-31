@@ -1,0 +1,4 @@
+{
+  "extends": "./.quasar/tsconfig.json",
+  "compilerOptions": { "strict": true, "noUncheckedIndexedAccess": false }
+}

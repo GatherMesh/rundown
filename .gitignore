@@ -1,0 +1,15 @@
+node_modules/
+.quasar/
+dist/
+functions/lib/
+functions/print/
+.env*
+!.env.example
+!**/.env.example
+.firebase/
+*-debug.log
+.emulator-data/
+artifacts/
+
+# Downloaded API/MCP credentials contain refresh tokens.
+rundown-credentials*.json

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Producer Rundown — Priya Shah</title>
+
+<script type="text/javascript">
+window.__expand = function (logicSrc, title) {
+  class DCLogic { constructor(){ this.props = {}; this.state = {}; } setState(){} }
+  const Component = new Function('DCLogic', logicSrc + '; return Component;')(DCLogic);
+  const vals = new Component().renderVals();
+  const look = (p, sc) => { p = p.trim(); if (p === 'true') return true; if (p === 'false') return false;
+    return p.split('.').reduce((o, k) => o == null ? undefined : o[k], sc); };
+  const sub = (s, sc) => s.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, p) => { const v = look(p, sc); return v == null ? '' : String(v); });
+  function walk(node, sc) {
+    for (const ch of Array.from(node.childNodes)) {
+      if (ch.nodeType === 3) { ch.nodeValue = sub(ch.nodeValue, sc); continue; }
+      if (ch.nodeType !== 1) continue;
+      const tag = ch.tagName.toLowerCase();
+      if (tag === 'sc-for') {
+        const list = look(ch.getAttribute('list').replace(/[{}]/g, ''), sc) || [];
+        const as = ch.getAttribute('as');
+        list.forEach((it, i) => {
+          const frag = document.createElement('div');
+          frag.innerHTML = ch.innerHTML;
+          walk(frag, Object.assign({}, sc, { [as]: it, $index: i }));
+          while (frag.firstChild) node.insertBefore(frag.firstChild, ch);
+        });
+        ch.remove(); continue;
+      }
+      if (tag === 'sc-if') {
+        const v = look(ch.getAttribute('value').replace(/[{}]/g, ''), sc);
+        if (v) { walk(ch, sc); while (ch.firstChild) node.insertBefore(ch.firstChild, ch); }
+        ch.remove(); continue;
+      }
+      for (const a of Array.from(ch.attributes)) {
+        const nv = sub(a.value, sc);
+        if ((a.name === 'checked') && (nv === 'false' || nv === '')) ch.removeAttribute('checked');
+        else ch.setAttribute(a.name, nv);
+      }
+      walk(ch, sc);
+    }
+  }
+  const root = document.querySelector('x-dc');
+  const helmet = root.querySelector('helmet');
+  if (helmet) { while (helmet.firstChild) document.head.appendChild(helmet.firstChild); helmet.remove(); }
+  walk(root, vals);
+  const out = document.createElement('div');
+  while (root.firstChild) out.appendChild(root.firstChild);
+  document.body.innerHTML = '';
+  while (out.firstChild) document.body.appendChild(out.firstChild);
+  document.title = title;
+  return '<!doctype html>\n' + document.documentElement.outerHTML;
+};</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+</style>
+</head>
+<body>
+
+<div style="width: 1123px; height: 794px; box-sizing: border-box; padding: 40px 44px 32px; background: #FFFFFF; font-family: Inter, system-ui, sans-serif; color: #16181D; font-size: 12px; display: flex; flex-direction: column; gap: 14px">
+
+  <header style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 12px; border-bottom: 2px solid #16181D">
+    <div style="display: flex; gap: 14px; align-items: center">
+      <div style="width: 56px; height: 56px; border-radius: 8px; border: 1.5px dashed #8A919E; color: #5B6270; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-align: center">[LOGO]</div>
+      <div style="display: flex; flex-direction: column; gap: 3px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em">Saturday Evening Celebration</h1>
+        <span style="font-size: 13px; color: #3D4350">Easter Convention 2027 · Main Auditorium · Youth &amp; Families night</span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 3px; text-align: right">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Prepared for</span>
+      <span style="font-size: 18px; font-weight: 700">Priya Shah</span>
+      <span style="font-size: 13px; color: #3D4350">Sat 27 Mar 2027 · 7:00 pm</span>
+    </div>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-direction: column">
+    <div style="display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 0 0 6px; border-bottom: 1px solid #16181D; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase">
+      <span>Start</span><span>Dur</span><span>Item</span><span>People</span><span>Notes</span><span>Audio</span><span>Video</span><span>Lighting</span><span>Camera</span><span>Slides</span>
+    </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #F3F5F8">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">7:00</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">10:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Walk-in loop</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Walk-in</span></span>
+        <span>Priya Shah</span>
+        <span style="color: #3D4350">Doors 6:45</span>
+        <span>Playlist bed −20</span>
+        <span>Loop + countdown</span>
+        <span>Warm wash 60%</span>
+        <span>Wide only</span>
+        <span>Countdown</span>
+      </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #FFFFFF">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">7:10</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">4:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Welcome &amp; notices</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Host</span></span>
+        <span>Sarah Nguyen</span>
+        <span style="color: #3D4350">From front row</span>
+        <span>HH-1 Sarah</span>
+        <span>Notices loop</span>
+        <span>Stage up, house 30%</span>
+        <span>Cam 2 MCU</span>
+        <span>Notices 1–6</span>
+      </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #FFFFFF">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">7:14</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">18:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Worship set</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Music</span></span>
+        <span>Josh Patel, Band</span>
+        <span style="color: #3D4350">4 songs, no break</span>
+        <span>Band scene 3</span>
+        <span>Lyrics</span>
+        <span>Song cues L10–L22</span>
+        <span>Cam 1 + 3 roam</span>
+        <span>ProPresenter</span>
+      </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #FFFFFF">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">7:32</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">3:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Prayer for the weekend</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Prayer</span></span>
+        <span>Dave Collins</span>
+        <span style="color: #3D4350">Band pads under</span>
+        <span>HH-2 Dave</span>
+        <span>Lower third</span>
+        <span>Stage 40%</span>
+        <span>Cam 2 MS</span>
+        <span>—</span>
+      </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #F3F5F8">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">7:35</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">3:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Kids program highlights</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Video</span></span>
+        <span>Priya Shah</span>
+        <span style="color: #3D4350">Roll on host cue</span>
+        <span>Video audio full</span>
+        <span>VT1 full screen</span>
+        <span>Stage black</span>
+        <span>Program = VT</span>
+        <span>—</span>
+      </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #FFFFFF">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">7:38</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">5:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Offering &amp; announcements</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Offering</span></span>
+        <span>Sarah Nguyen</span>
+        <span style="color: #3D4350">Ushers ready 7:37</span>
+        <span>HH-1, band soft</span>
+        <span>Give QR</span>
+        <span>Stage 60%</span>
+        <span>Cam 2 MCU</span>
+        <span>Give + notices</span>
+      </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #FFFFFF">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">7:43</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">35:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Message — Risen Indeed</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Spoken</span></span>
+        <span>Rev. Margaret Hill</span>
+        <span style="color: #3D4350">Lectern CS · time cards</span>
+        <span>HS-2 Margaret</span>
+        <span>Sermon title</span>
+        <span>Lectern special</span>
+        <span>Cam 2 MCU, 1 wide</span>
+        <span>Sermon 1–14</span>
+      </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #FFFFFF">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">8:18</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">6:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Response song</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Music</span></span>
+        <span>Josh Patel, Band</span>
+        <span style="color: #3D4350">Band on during close</span>
+        <span>Band scene 4</span>
+        <span>Lyrics</span>
+        <span>L23 slow build</span>
+        <span>Cam 3 roam</span>
+        <span>ProPresenter</span>
+      </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #FFFFFF">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">8:24</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">2:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Benediction</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Spoken</span></span>
+        <span>Rev. Margaret Hill</span>
+        <span style="color: #3D4350">—</span>
+        <span>HS-2</span>
+        <span>Lower third</span>
+        <span>Stage 60%</span>
+        <span>Cam 2 MS</span>
+        <span>—</span>
+      </div>
+    
+      <div style="flex: 1; display: grid; grid-template-columns: 44px 44px 168px 104px minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px; padding: 6px 0; border-bottom: 1px solid #C9CED6; align-items: start; line-height: 1.3; background: #F3F5F8">
+        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">8:26</span>
+        <span style="font-family: 'JetBrains Mono', monospace; color: #3D4350">15:00</span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 700">Walk-out loop</span><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5B6270">Walk-in</span></span>
+        <span>Priya Shah</span>
+        <span style="color: #3D4350">Doors open</span>
+        <span>Playlist up</span>
+        <span>Thanks loop</span>
+        <span>House 100%</span>
+        <span>Wide only</span>
+        <span>Tomorrow</span>
+      </div>
+    
+  </div>
+
+  <footer style="display: flex; justify-content: space-between; font-size: 10px; color: #5B6270">
+    <span>Producer Rundown · copy 1 of 2</span>
+    <span>Runtime 1:41:00 · ends 8:41 pm</span>
+    <span>Page 1 of 1</span>
+  </footer>
+</div>
+</body></html>

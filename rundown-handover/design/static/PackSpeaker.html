@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Speaker Cue Cards — Rev. Margaret Hill</title>
+
+<script type="text/javascript">
+window.__expand = function (logicSrc, title) {
+  class DCLogic { constructor(){ this.props = {}; this.state = {}; } setState(){} }
+  const Component = new Function('DCLogic', logicSrc + '; return Component;')(DCLogic);
+  const vals = new Component().renderVals();
+  const look = (p, sc) => { p = p.trim(); if (p === 'true') return true; if (p === 'false') return false;
+    return p.split('.').reduce((o, k) => o == null ? undefined : o[k], sc); };
+  const sub = (s, sc) => s.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, p) => { const v = look(p, sc); return v == null ? '' : String(v); });
+  function walk(node, sc) {
+    for (const ch of Array.from(node.childNodes)) {
+      if (ch.nodeType === 3) { ch.nodeValue = sub(ch.nodeValue, sc); continue; }
+      if (ch.nodeType !== 1) continue;
+      const tag = ch.tagName.toLowerCase();
+      if (tag === 'sc-for') {
+        const list = look(ch.getAttribute('list').replace(/[{}]/g, ''), sc) || [];
+        const as = ch.getAttribute('as');
+        list.forEach((it, i) => {
+          const frag = document.createElement('div');
+          frag.innerHTML = ch.innerHTML;
+          walk(frag, Object.assign({}, sc, { [as]: it, $index: i }));
+          while (frag.firstChild) node.insertBefore(frag.firstChild, ch);
+        });
+        ch.remove(); continue;
+      }
+      if (tag === 'sc-if') {
+        const v = look(ch.getAttribute('value').replace(/[{}]/g, ''), sc);
+        if (v) { walk(ch, sc); while (ch.firstChild) node.insertBefore(ch.firstChild, ch); }
+        ch.remove(); continue;
+      }
+      for (const a of Array.from(ch.attributes)) {
+        const nv = sub(a.value, sc);
+        if ((a.name === 'checked') && (nv === 'false' || nv === '')) ch.removeAttribute('checked');
+        else ch.setAttribute(a.name, nv);
+      }
+      walk(ch, sc);
+    }
+  }
+  const root = document.querySelector('x-dc');
+  const helmet = root.querySelector('helmet');
+  if (helmet) { while (helmet.firstChild) document.head.appendChild(helmet.firstChild); helmet.remove(); }
+  walk(root, vals);
+  const out = document.createElement('div');
+  while (root.firstChild) out.appendChild(root.firstChild);
+  document.body.innerHTML = '';
+  while (out.firstChild) document.body.appendChild(out.firstChild);
+  document.title = title;
+  return '<!doctype html>\n' + document.documentElement.outerHTML;
+};</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+</style>
+</head>
+<body>
+
+<div style="width: 794px; height: 1123px; box-sizing: border-box; padding: 48px 48px 36px; background: #FFFFFF; font-family: Inter, system-ui, sans-serif; color: #16181D; font-size: 13px; display: flex; flex-direction: column; gap: 18px">
+
+  <header style="display: flex; flex-direction: column; gap: 12px; padding-bottom: 14px; border-bottom: 2px solid #16181D">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <div style="width: 48px; height: 48px; border-radius: 8px; border: 1.5px dashed #8A919E; color: #5B6270; font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center">[LOGO]</div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Prepared for</span>
+        <span style="font-size: 20px; font-weight: 700">Rev. Margaret Hill</span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <h1 style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em">Saturday Evening Celebration</h1>
+      <span style="font-size: 14px; color: #3D4350">Easter Convention 2027 · Sat 27 Mar 2027 · 7:00 pm</span>
+      <span style="font-size: 13px; color: #5B6270">Main Auditorium · Youth &amp; Families night</span>
+    </div>
+  </header>
+
+  <!-- Context: before -->
+  <div style="display: flex; align-items: center; gap: 14px; padding: 10px 14px; border: 1px solid #D5D9E0; border-radius: 8px; color: #3D4350">
+    <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; width: 44px">7:38</span>
+    <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270; width: 56px">Before</span>
+    <span style="flex: 1; font-weight: 600">Offering &amp; announcements</span>
+    <span>Sarah Nguyen · 5:00</span>
+  </div>
+
+  <!-- Main card -->
+  <section style="border: 2px solid #16181D; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #A4510E">Spoken · Item 7</span>
+        <h2 style="margin: 0; font-size: 24px; font-weight: 700">Message — Risen Indeed</h2>
+      </div>
+      <div style="display: flex; gap: 18px; text-align: right">
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Start</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500">7:43</span></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Length</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500">35:00</span></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Finish</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500">8:18</span></span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Notes</span>
+      <span style="line-height: 1.5">Lectern centre stage. Water on shelf. 5-min and 1-min cards from front row.</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: #F5F6F8; border-radius: 6px">
+      <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Script</span>
+      <span style="font-size: 15px; line-height: 1.6; white-space: pre-line">[Host hands over after offering music fades]
+Margaret walks on from stage left. Opens with Luke 24:1–6.
+[Sermon title slide on first word]
+…
+[At close: "Let's stand as the band comes back"] → Response song</span>
+    </div>
+    <div style="display: flex; gap: 16px; align-items: flex-start">
+      <div style="width: 192px; height: 108px; flex: none; border-radius: 6px; background: #E8EBF0; border: 1px solid #C9CED6; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #5B6270">[Image slide]</div>
+      <div style="flex: 1; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 6px 10px; line-height: 1.4">
+        <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270; padding-top: 2px">Audio</span><span>Headset HS-2. Lectern mic backup, muted.</span>
+        <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270; padding-top: 2px">Slides</span><span>Sermon deck 1–14, advanced from booth.</span>
+        <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270; padding-top: 2px">Camera</span><span>Cam 2 MCU, Cam 1 wide on walks.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Context: after -->
+  <div style="display: flex; align-items: center; gap: 14px; padding: 10px 14px; border: 1px solid #D5D9E0; border-radius: 8px; color: #3D4350">
+    <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; width: 44px">8:18</span>
+    <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270; width: 56px">After</span>
+    <span style="flex: 1; font-weight: 600">Response song</span>
+    <span>Josh Patel, Band · 6:00</span>
+  </div>
+
+  <!-- Second card -->
+  <section style="border: 2px solid #16181D; border-radius: 10px; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #A4510E">Spoken · Item 9</span>
+        <h2 style="margin: 0; font-size: 22px; font-weight: 700">Benediction</h2>
+      </div>
+      <div style="display: flex; gap: 18px; text-align: right">
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Start</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500">8:24</span></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Length</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500">2:00</span></span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: #F5F6F8; border-radius: 6px">
+      <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5B6270">Script</span>
+      <span style="font-size: 15px; line-height: 1.6">[Return to centre as song ends] Numbers 6:24–26. Walk-out loop starts on “Amen”.</span>
+    </div>
+  </section>
+
+  <footer style="margin-top: auto; display: flex; justify-content: space-between; font-size: 10px; color: #5B6270; padding-top: 10px; border-top: 1px solid #C9CED6">
+    <span>Speaker Cue Cards · your items + one either side</span>
+    <span>Page 1 of 1</span>
+  </footer>
+</div>
+</body></html>

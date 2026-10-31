@@ -1,0 +1,51 @@
+rules_version = '2';
+// Starting point — extend with field validation per collection.
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function member(t) { return signedIn() && exists(/databases/$(db)/documents/tenants/$(t)/members/$(request.auth.uid)); }
+    function role(t) { return get(/databases/$(db)/documents/tenants/$(t)/members/$(request.auth.uid)).data.role; }
+    function canEdit(t) { return member(t) && role(t) in ['owner', 'editor']; }
+    function isOwner(t) { return member(t) && role(t) == 'owner'; }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /tenants/{t} {
+      allow read: if member(t);
+      allow create: if signedIn();                 // creator must also create their owner member doc in the same batch
+      allow update, delete: if isOwner(t);
+
+      match /members/{uid} {
+        allow read: if member(t);
+        allow create: if isOwner(t)
+          || (signedIn() && uid == request.auth.uid && request.resource.data.role == 'owner'
+              && !exists(/databases/$(db)/documents/tenants/$(t)/members/$(uid))
+              && getAfter(/databases/$(db)/documents/tenants/$(t)).data.createdBy == request.auth.uid);
+        allow update, delete: if isOwner(t);
+      }
+
+      match /exportJobs/{job} {
+        allow read: if member(t);
+        allow write: if false;                     // functions only
+      }
+
+      // Explicit collections (not a tenant-wide wildcard: rules OR together, and a wildcard
+      // would let editors write members/exportJobs).
+      match /categories/{id} {
+        allow read: if member(t);
+        allow write: if canEdit(t);
+      }
+      match /templates/{id} {
+        allow read: if member(t);
+        allow write: if canEdit(t);
+      }
+      match /events/{eventId}/{document=**} {
+        allow read: if member(t);
+        allow write: if canEdit(t);
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "predeploy": [
+        "npm run build"
+      ],
+      "ignore": [
+        "node_modules",
+        ".git",
+        "tsconfig.json",
+        "*.log"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "app/dist/spa",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "function": {
+          "functionId": "api",
+          "region": "australia-southeast1"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "storage": {
+      "port": 9199
+    },
+    "functions": {
+      "port": 5001
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "GatherMesh Rundown",
+        "supportEmail": "info@qcecollective.com",
+        "authorizedRedirectUris": [
+          "https://gathermesh-rundown.firebaseapp.com/__/auth/handler",
+          "https://gathermesh-rundown.web.app/__/auth/handler"
+        ]
+      }
+    }
+  }
+}

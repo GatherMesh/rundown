@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rundown — Export</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F5F6F8}
+a{color:#2457D6}a:hover{color:#1A3FA0}
+</style>
+</helmet>
+<div style="min-height: 1040px; background: #F5F6F8; font-family: Inter, system-ui, sans-serif; color: #16181D; font-size: 14px; display: flex; flex-direction: column">
+
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E2E5EA; display: flex; flex-wrap: wrap; align-items: center; gap: 24px; padding: 0 24px; min-height: 56px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" fill="#2457D6"></rect><path d="M7 8h10M7 12h7M7 16h9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"></path></svg>
+      <span style="font-weight: 700; font-size: 16px; letter-spacing: -0.01em">Rundown</span>
+    </div>
+    <button style="display: flex; align-items: center; gap: 8px; border: 1px solid #E2E5EA; background: #F8F9FB; border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; color: #16181D; min-height: 32px">
+      <span style="width: 18px; height: 18px; border-radius: 4px; background: #16181D; color: #FFFFFF; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center">Q</span>
+      QCEC
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5B6270" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+    <nav aria-label="Main" style="display: flex; align-items: stretch; gap: 4px; align-self: stretch">
+      <a href="Main.dc.html" style="display: flex; align-items: center; padding: 0 12px; color: #5B6270; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent">Sessions</a>
+      <a href="Templates.dc.html" style="display: flex; align-items: center; padding: 0 12px; color: #5B6270; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent">Templates</a>
+      <a href="Export.dc.html" style="display: flex; align-items: center; padding: 0 12px; color: #16181D; text-decoration: none; font-weight: 600; border-bottom: 2px solid #2457D6">Export</a>
+      <a href="#people" style="display: flex; align-items: center; padding: 0 12px; color: #5B6270; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent">People</a>
+      <a href="#categories" style="display: flex; align-items: center; padding: 0 12px; color: #5B6270; text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent">Categories</a>
+    </nav>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px">
+      <span style="font-size: 12px; color: #5B6270">Saved · just now</span>
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #E6EEFF; color: #1F49B6; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">JB</span>
+    </div>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1; align-items: stretch">
+
+    <main style="flex: 999 1 640px; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em">Session packs</h1>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5B6270">For
+            <select style="font: inherit; font-size: 14px; color: #16181D; border: 1px solid #D5D9E0; border-radius: 8px; padding: 0 10px; min-height: 36px; background: #FFFFFF"><option>Saturday Evening Celebration · Sat 27 Mar · 7:00 pm</option></select>
+          </label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px">
+          <span style="font-size: 13px; color: #5B6270"><strong style="color: #16181D">6</strong> of 8 people · <strong style="color: #16181D">17</strong> sheets</span>
+          <button style="border: 1px solid #D5D9E0; background: #FFFFFF; border-radius: 8px; padding: 0 14px; min-height: 44px; font: inherit; font-weight: 500; color: #16181D">Download all (PDF)</button>
+          <button style="display: flex; align-items: center; gap: 8px; border: 0; background: #2457D6; color: #FFFFFF; border-radius: 8px; padding: 0 18px; min-height: 44px; font: inherit; font-weight: 600">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M7 14h10v7H7z"></path></svg>
+            Print all packs
+          </button>
+        </div>
+      </div>
+
+      <section aria-label="People" style="background: #FFFFFF; border: 1px solid #E2E5EA; border-radius: 12px; overflow: hidden">
+        <div style="overflow-x: auto">
+          <div style="min-width: 760px">
+            <div style="display: grid; grid-template-columns: 52px minmax(0, 1.2fr) minmax(0, 1.6fr) 96px 96px 56px 72px; gap: 12px; align-items: center; padding: 10px 16px; background: #F8F9FB; border-bottom: 1px solid #E2E5EA; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270">
+              <span>Export</span><span>Person</span><span>Templates</span><span>Sides</span><span>Scaling</span><span>Sheets</span><span></span>
+            </div>
+            <sc-for list="{{people}}" as="p" hint-placeholder-count="8">
+              <div style="display: grid; grid-template-columns: 52px minmax(0, 1.2fr) minmax(0, 1.6fr) 96px 96px 56px 72px; gap: 12px; align-items: center; padding: 10px 16px; min-height: 60px; box-sizing: border-box; border-bottom: 1px solid #EEF0F3; background: {{p.rowBg}}; box-shadow: {{p.rowRing}}; opacity: {{p.opacity}}">
+                <button role="switch" aria-checked="{{p.on}}" aria-label="Export pack for {{p.name}}" style="width: 36px; height: 20px; border: 0; border-radius: 999px; background: {{p.trackBg}}; padding: 2px; display: flex; justify-content: {{p.knobSide}}">
+                  <span style="width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 2px rgba(22,24,29,0.2)"></span>
+                </button>
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+                  <span style="flex: none; width: 32px; height: 32px; border-radius: 50%; background: #EEF0F3; color: #3D4350; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">{{p.initials}}</span>
+                  <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+                    <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.name}}</span>
+                    <span style="font-size: 12px; color: #5B6270">{{p.role}}</span>
+                  </span>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px">
+                  <sc-for list="{{p.templates}}" as="t" hint-placeholder-count="2">
+                    <span style="font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 6px; background: #F1F3F6; color: #16181D">{{t}}</span>
+                  </sc-for>
+                </div>
+                <span style="font-size: 13px; color: #3D4350">{{p.sides}}</span>
+                <span style="font-size: 13px; color: #3D4350">{{p.scale}}</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px">{{p.sheets}}</span>
+                <button style="border: 1px solid #D5D9E0; background: #FFFFFF; border-radius: 6px; padding: 0 10px; min-height: 32px; font: inherit; font-size: 12px; font-weight: 500; color: #16181D">Print</button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+      <span style="font-size: 12px; color: #5B6270">People come from the event. Each pack prints with that person’s name in the template header.</span>
+    </main>
+
+    <!-- Pack config for selected person -->
+    <aside aria-label="Pack settings" style="flex: 1 1 400px; max-width: 460px; background: #FFFFFF; border-left: 1px solid #E2E5EA; padding: 20px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="width: 40px; height: 40px; border-radius: 50%; background: #FFF0E3; color: #A4510E; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center">MH</span>
+        <span style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 16px; font-weight: 700">Rev. Margaret Hill</span>
+          <span style="font-size: 12px; color: #5B6270">Speaker · on 2 items</span>
+        </span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270">Templates in this pack</span>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #E2E5EA; border-radius: 8px">
+          <svg width="10" height="14" viewBox="0 0 12 16" fill="#A6ADB9" aria-hidden="true"><circle cx="3" cy="3" r="1.5"></circle><circle cx="9" cy="3" r="1.5"></circle><circle cx="3" cy="8" r="1.5"></circle><circle cx="9" cy="8" r="1.5"></circle><circle cx="3" cy="13" r="1.5"></circle><circle cx="9" cy="13" r="1.5"></circle></svg>
+          <span style="width: 13px; height: 18px; border: 1.5px solid #8A919E; border-radius: 2px"></span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">Speaker Cue Cards</span><span style="font-size: 12px; color: #5B6270">Portrait · 1 page</span></span>
+          <div style="display: flex; align-items: center; border: 1px solid #D5D9E0; border-radius: 6px">
+            <button aria-label="Fewer copies" style="width: 30px; height: 30px; border: 0; background: transparent; font: inherit; color: #3D4350">−</button>
+            <span style="min-width: 28px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 13px">×2</span>
+            <button aria-label="More copies" style="width: 30px; height: 30px; border: 0; background: transparent; font: inherit; color: #3D4350">+</button>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #E2E5EA; border-radius: 8px">
+          <svg width="10" height="14" viewBox="0 0 12 16" fill="#A6ADB9" aria-hidden="true"><circle cx="3" cy="3" r="1.5"></circle><circle cx="9" cy="3" r="1.5"></circle><circle cx="3" cy="8" r="1.5"></circle><circle cx="9" cy="8" r="1.5"></circle><circle cx="3" cy="13" r="1.5"></circle><circle cx="9" cy="13" r="1.5"></circle></svg>
+          <span style="width: 18px; height: 13px; border: 1.5px solid #8A919E; border-radius: 2px"></span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-weight: 600">Producer Rundown</span><span style="font-size: 12px; color: #5B6270">Landscape · 1 page</span></span>
+          <div style="display: flex; align-items: center; border: 1px solid #D5D9E0; border-radius: 6px">
+            <button aria-label="Fewer copies" style="width: 30px; height: 30px; border: 0; background: transparent; font: inherit; color: #3D4350">−</button>
+            <span style="min-width: 28px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 13px">×1</span>
+            <button aria-label="More copies" style="width: 30px; height: 30px; border: 0; background: transparent; font: inherit; color: #3D4350">+</button>
+          </div>
+        </div>
+        <button style="align-self: flex-start; border: 1px dashed #C9CED6; background: transparent; border-radius: 8px; padding: 0 12px; min-height: 36px; font: inherit; font-size: 13px; color: #2457D6">+ Add template</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270">Sides</span>
+        <div role="radiogroup" aria-label="Sides" style="display: flex; gap: 2px; background: #F1F3F6; border-radius: 8px; padding: 3px">
+          <button role="radio" aria-checked="false" style="flex: 1; border: 0; background: transparent; border-radius: 6px; min-height: 34px; font: inherit; font-size: 13px; color: #3D4350">Single</button>
+          <button role="radio" aria-checked="true" style="flex: 1; border: 0; background: #FFFFFF; border-radius: 6px; min-height: 34px; font: inherit; font-size: 13px; font-weight: 600; color: #16181D; box-shadow: 0 1px 2px rgba(22,24,29,0.08)">Double · long edge</button>
+          <button role="radio" aria-checked="false" style="flex: 1; border: 0; background: transparent; border-radius: 6px; min-height: 34px; font: inherit; font-size: 13px; color: #3D4350">Double · short edge</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270">Scaling</span>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+          <button aria-pressed="true" style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 6px; border: 2px solid #2457D6; background: #F5F8FF; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600; color: #16181D">
+            <span style="width: 22px; height: 30px; border: 1.5px solid #8A919E; border-radius: 2px; padding: 2px; box-sizing: border-box"><span style="display: block; width: 100%; height: 100%; background: #C9D6F7"></span></span>Fit to A4</button>
+          <button aria-pressed="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 6px; border: 1px solid #E2E5EA; background: #FFFFFF; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 500; color: #16181D">
+            <span style="width: 22px; height: 30px; border: 1.5px solid #8A919E; border-radius: 2px; padding: 5px; box-sizing: border-box"><span style="display: block; width: 100%; height: 100%; background: #DDE1E7"></span></span>Actual size</button>
+          <button aria-pressed="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 6px; border: 1px solid #E2E5EA; background: #FFFFFF; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 500; color: #16181D">
+            <span style="width: 22px; height: 30px; border: 1.5px solid #8A919E; border-radius: 2px; padding: 2px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px"><span style="flex: 1; background: #DDE1E7"></span><span style="flex: 1; background: #DDE1E7"></span></span>2 per sheet</button>
+          <button aria-pressed="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 6px; border: 1px solid #E2E5EA; background: #FFFFFF; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 500; color: #16181D">
+            <span style="width: 22px; height: 30px; border: 1.5px solid #8A919E; border-radius: 2px; padding: 2px; box-sizing: border-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px"><span style="background: #DDE1E7"></span><span style="background: #DDE1E7"></span><span style="background: #DDE1E7"></span><span style="background: #DDE1E7"></span></span>4 per sheet</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5B6270; padding-bottom: 4px">Options</span>
+        <label style="display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 13px"><input type="checkbox" checked style="width: 16px; height: 16px; accent-color: #2457D6; margin: 0">Collate copies</label>
+        <label style="display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 13px"><input type="checkbox" checked style="width: 16px; height: 16px; accent-color: #2457D6; margin: 0">Start each template on a new sheet</label>
+        <label style="display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 13px"><input type="checkbox" style="width: 16px; height: 16px; accent-color: #2457D6; margin: 0">Add a cover sheet with name</label>
+      </div>
+
+      <div style="margin-top: auto; display: flex; flex-direction: column; gap: 12px; padding: 14px; background: #F8F9FB; border: 1px solid #E2E5EA; border-radius: 10px">
+        <div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #5B6270">Pages</span><span style="font-family: 'JetBrains Mono', monospace">3</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #5B6270">Sheets (double-sided)</span><span style="font-family: 'JetBrains Mono', monospace">3</span></div>
+        <div style="display: flex; gap: 8px">
+          <a href="PackSpeaker.dc.html" style="flex: 1; display: flex; align-items: center; justify-content: center; border: 1px solid #D5D9E0; background: #FFFFFF; border-radius: 8px; min-height: 40px; text-decoration: none; font-weight: 500; color: #16181D">Preview PDF</a>
+          <button style="flex: 1; border: 0; background: #2457D6; color: #FFFFFF; border-radius: 8px; min-height: 40px; font: inherit; font-weight: 600">Print pack</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    function p(name, role, initials, templates, sides, scale, sheets, on, sel) {
+      return {
+        name: name, role: role, initials: initials, templates: templates, sides: sides, scale: scale,
+        sheets: sheets, on: on ? 'true' : 'false',
+        trackBg: on ? '#2457D6' : '#C9CED6', knobSide: on ? 'flex-end' : 'flex-start',
+        opacity: on ? 1 : 0.6,
+        rowBg: sel ? '#EEF3FF' : '#FFFFFF', rowRing: sel ? 'inset 3px 0 0 #2457D6' : 'none'
+      };
+    }
+    var people = [
+      p('Priya Shah', 'Producer', 'PS', ['Producer Rundown ×2', 'Host Script ×1'], 'Double', 'Fit to A4', '6', true),
+      p('Rev. Margaret Hill', 'Speaker', 'MH', ['Speaker Cue Cards ×2', 'Producer Rundown ×1'], 'Double', 'Fit to A4', '3', true, true),
+      p('Sarah Nguyen', 'Host', 'SN', ['Host Script ×1', 'Speaker Cue Cards ×1'], 'Single', 'Fit to A4', '3', true),
+      p('Josh Patel', 'Worship leader', 'JP', ['Producer Rundown ×1'], 'Single', '2 per sheet', '1', true),
+      p("Liam O'Connor", 'Audio · FOH', 'LO', ['Audio Sheet ×2'], 'Single', 'Fit to A4', '2', true),
+      p('Tom Becker', 'Camera director', 'TB', ['Camera Shot List ×2'], 'Double', 'Fit to A4', '2', true),
+      p('Ellie Ward', 'Lighting', 'EW', ['Lighting Cue Sheet ×1'], 'Single', 'Fit to A4', '—', false),
+      p('Dave Collins', 'Pastor', 'DC', ['Speaker Cue Cards ×1'], 'Single', 'Fit to A4', '—', false)
+    ];
+    return { people: people };
+  }
+}
+</script>
+</body>
+</html>

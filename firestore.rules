@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{db}/documents {
+  function signedIn(){return request.auth != null;}
+  function member(t){return signedIn() && exists(/databases/$(db)/documents/tenants/$(t)/members/$(request.auth.uid));}
+  function role(t){return get(/databases/$(db)/documents/tenants/$(t)/members/$(request.auth.uid)).data.role;}
+  function edit(t){return member(t) && role(t) in ['owner','editor'];}
+  function owner(t){return member(t) && role(t)=='owner';}
+  function name(d){return d.name is string && d.name.size()>0 && d.name.size()<=300;}
+  function pack(p){return p.enabled is bool && p.templates is list && p.templates.size()<=20 && p.sides in ['single','duplexLong','duplexShort'] && p.scaling in ['fit','actual','2up','4up'] && p.collate is bool && p.newSheetPerTemplate is bool && p.coverSheet is bool;}
+  match /users/{uid}{allow read:if signedIn()&&request.auth.uid==uid;allow create,update:if signedIn()&&request.auth.uid==uid && request.resource.data.tenantIds is list && request.resource.data.tenantIds.size()<=100;}
+  match /tenants/{t}{
+   allow read:if member(t);
+   allow create:if signedIn() && name(request.resource.data) && request.resource.data.createdBy==request.auth.uid && getAfter(/databases/$(db)/documents/tenants/$(t)/members/$(request.auth.uid)).data.role=='owner';
+   allow update:if owner(t)&&name(request.resource.data)&&request.resource.data.createdBy==resource.data.createdBy;
+   match /members/{uid}{
+    allow read:if member(t);
+    allow create:if request.resource.data.role in ['owner','editor','viewer'] && (owner(t)||(signedIn()&&uid==request.auth.uid&&request.resource.data.role=='owner'&&!exists(/databases/$(db)/documents/tenants/$(t))&&getAfter(/databases/$(db)/documents/tenants/$(t)).data.createdBy==request.auth.uid));
+    allow update,delete:if owner(t)&&uid!=request.auth.uid && (request.method=='delete'||request.resource.data.role in ['owner','editor','viewer']);
+   }
+   match /exportJobs/{id}{allow read:if member(t);allow write:if false;}
+   match /categories/{id}{allow read:if member(t);allow create,update:if edit(t)&&name(request.resource.data)&&request.resource.data.order is number&&request.resource.data.bg.matches('^#[a-fA-F0-9]{6}$')&&request.resource.data.fg.matches('^#[a-fA-F0-9]{6}$');allow delete:if edit(t);}
+   match /templates/{id}{allow read:if member(t);allow create,update:if edit(t)&&name(request.resource.data)&&request.resource.data.paper=='A4'&&request.resource.data.orientation in ['portrait','landscape']&&request.resource.data.itemStyle in ['table','cards','cueCard','compact']&&request.resource.data.columns is list&&request.resource.data.columns.size()<=16&&request.resource.data.filter.scope in ['all','recipient','recipientPlusNeighbours'];allow delete:if edit(t);}
+   match /events/{eventId}{
+    allow read:if member(t);allow create,update:if edit(t)&&name(request.resource.data)&&request.resource.data.timeZone is string&&request.resource.data.startDate is string&&request.resource.data.endDate is string;allow delete:if edit(t);
+    match /people/{id}{allow read:if member(t);allow create,update:if edit(t)&&name(request.resource.data)&&pack(request.resource.data.pack);allow delete:if edit(t);}
+    match /sessions/{sessionId}{
+     allow read:if member(t);allow create,update:if edit(t)&&name(request.resource.data)&&request.resource.data.startAt is timestamp&&request.resource.data.sortKey==request.resource.data.startAt&&request.resource.data.itemCount is int&&request.resource.data.itemCount>=0;allow delete:if edit(t);
+     match /items/{id}{
+      allow read:if member(t);
+      allow create,update:if edit(t)&&request.resource.data.title is string&&request.resource.data.title.size()>0&&request.resource.data.title.size()<=500&&request.resource.data.durationSec is int&&request.resource.data.durationSec>=0&&request.resource.data.durationSec<=86400&&request.resource.data.order is string&&request.resource.data.personIds is list&&request.resource.data.personIds.size()<=100&&request.resource.data.av is map&&existsAfter(/databases/$(db)/documents/tenants/$(t)/categories/$(request.resource.data.categoryId))&&request.resource.data.updatedBy==request.auth.uid;
+      allow delete:if edit(t);
+     }
+    }
+   }
+  }
+ }
+}

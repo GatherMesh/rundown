@@ -1,0 +1,1192 @@
+{
+  "_comment": "Seed data matching design/screens/*.png. Timestamps are ISO strings; convert to Firestore Timestamps on import. 'order' values are placeholder fractional keys.",
+  "tenant": {
+    "id": "qcec",
+    "name": "QCEC",
+    "logo": null
+  },
+  "categories": [
+    {
+      "id": "walkin",
+      "name": "Walk-in",
+      "bg": "#EEF0F3",
+      "fg": "#4A5160",
+      "order": 0
+    },
+    {
+      "id": "host",
+      "name": "Host",
+      "bg": "#E6EEFF",
+      "fg": "#1F49B6",
+      "order": 1
+    },
+    {
+      "id": "music",
+      "name": "Music",
+      "bg": "#F1E9FF",
+      "fg": "#6B34C9",
+      "order": 2
+    },
+    {
+      "id": "prayer",
+      "name": "Prayer",
+      "bg": "#E5F5EC",
+      "fg": "#1C7A47",
+      "order": 3
+    },
+    {
+      "id": "video",
+      "name": "Video",
+      "bg": "#E3F4F6",
+      "fg": "#126B78",
+      "order": 4
+    },
+    {
+      "id": "offering",
+      "name": "Offering",
+      "bg": "#FBF3D9",
+      "fg": "#7A5B00",
+      "order": 5
+    },
+    {
+      "id": "spoken",
+      "name": "Spoken",
+      "bg": "#FFF0E3",
+      "fg": "#A4510E",
+      "order": 6
+    }
+  ],
+  "templates": [
+    {
+      "id": "producer-rundown",
+      "name": "Producer Rundown",
+      "orientation": "landscape",
+      "paper": "A4",
+      "pageMode": {
+        "kind": "flow"
+      },
+      "header": {
+        "sessionName": {
+          "show": true,
+          "align": "left"
+        },
+        "eventName": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionDateTime": {
+          "show": true,
+          "align": "right"
+        },
+        "logo": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionSubtitle": {
+          "show": true,
+          "align": "left"
+        },
+        "personName": {
+          "show": true,
+          "align": "right"
+        }
+      },
+      "itemStyle": "table",
+      "columns": [
+        {
+          "key": "start",
+          "visible": true,
+          "width": "44px"
+        },
+        {
+          "key": "duration",
+          "visible": true,
+          "width": "44px"
+        },
+        {
+          "key": "title",
+          "visible": true,
+          "width": "168px"
+        },
+        {
+          "key": "category",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "people",
+          "visible": true,
+          "width": "104px"
+        },
+        {
+          "key": "notes",
+          "visible": true,
+          "width": "1.3fr"
+        },
+        {
+          "key": "audio",
+          "visible": true,
+          "width": "1fr"
+        },
+        {
+          "key": "video",
+          "visible": true,
+          "width": "1fr"
+        },
+        {
+          "key": "lighting",
+          "visible": true,
+          "width": "1fr"
+        },
+        {
+          "key": "camera",
+          "visible": true,
+          "width": "1fr"
+        },
+        {
+          "key": "slides",
+          "visible": true,
+          "width": "1fr"
+        },
+        {
+          "key": "end",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "number",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "script",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "imageSlide",
+          "visible": false,
+          "width": "auto"
+        }
+      ],
+      "filter": {
+        "scope": "all",
+        "categoryIds": null
+      }
+    },
+    {
+      "id": "speaker-cue-cards",
+      "name": "Speaker Cue Cards",
+      "orientation": "portrait",
+      "paper": "A4",
+      "pageMode": {
+        "kind": "flow"
+      },
+      "header": {
+        "sessionName": {
+          "show": true,
+          "align": "left"
+        },
+        "eventName": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionDateTime": {
+          "show": true,
+          "align": "right"
+        },
+        "logo": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionSubtitle": {
+          "show": true,
+          "align": "left"
+        },
+        "personName": {
+          "show": true,
+          "align": "right"
+        }
+      },
+      "itemStyle": "cards",
+      "columns": [
+        {
+          "key": "start",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "duration",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "end",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "number",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "title",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "category",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "notes",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "script",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "audio",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "slides",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "camera",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "imageSlide",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "people",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "video",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "lighting",
+          "visible": false,
+          "width": "auto"
+        }
+      ],
+      "filter": {
+        "scope": "recipientPlusNeighbours",
+        "categoryIds": null
+      }
+    },
+    {
+      "id": "host-script",
+      "name": "Host Script",
+      "orientation": "portrait",
+      "paper": "A4",
+      "pageMode": {
+        "kind": "flow"
+      },
+      "header": {
+        "sessionName": {
+          "show": true,
+          "align": "left"
+        },
+        "eventName": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionDateTime": {
+          "show": true,
+          "align": "right"
+        },
+        "logo": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionSubtitle": {
+          "show": true,
+          "align": "left"
+        },
+        "personName": {
+          "show": true,
+          "align": "right"
+        }
+      },
+      "itemStyle": "cueCard",
+      "columns": [
+        {
+          "key": "start",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "duration",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "title",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "notes",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "script",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "end",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "number",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "category",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "people",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "audio",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "video",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "lighting",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "camera",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "slides",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "imageSlide",
+          "visible": false,
+          "width": "auto"
+        }
+      ],
+      "filter": {
+        "scope": "recipient",
+        "categoryIds": null
+      }
+    },
+    {
+      "id": "audio-sheet",
+      "name": "Audio Sheet",
+      "orientation": "portrait",
+      "paper": "A4",
+      "pageMode": {
+        "kind": "flow"
+      },
+      "header": {
+        "sessionName": {
+          "show": true,
+          "align": "left"
+        },
+        "eventName": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionDateTime": {
+          "show": true,
+          "align": "right"
+        },
+        "logo": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionSubtitle": {
+          "show": true,
+          "align": "left"
+        },
+        "personName": {
+          "show": true,
+          "align": "right"
+        }
+      },
+      "itemStyle": "compact",
+      "columns": [
+        {
+          "key": "start",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "duration",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "title",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "people",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "audio",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "end",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "number",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "category",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "notes",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "script",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "video",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "lighting",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "camera",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "slides",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "imageSlide",
+          "visible": false,
+          "width": "auto"
+        }
+      ],
+      "filter": {
+        "scope": "all",
+        "categoryIds": null
+      }
+    },
+    {
+      "id": "camera-shot-list",
+      "name": "Camera Shot List",
+      "orientation": "landscape",
+      "paper": "A4",
+      "pageMode": {
+        "kind": "flow"
+      },
+      "header": {
+        "sessionName": {
+          "show": true,
+          "align": "left"
+        },
+        "eventName": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionDateTime": {
+          "show": true,
+          "align": "right"
+        },
+        "logo": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionSubtitle": {
+          "show": true,
+          "align": "left"
+        },
+        "personName": {
+          "show": true,
+          "align": "right"
+        }
+      },
+      "itemStyle": "table",
+      "columns": [
+        {
+          "key": "start",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "duration",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "title",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "people",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "camera",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "video",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "end",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "number",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "category",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "notes",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "script",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "audio",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "lighting",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "slides",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "imageSlide",
+          "visible": false,
+          "width": "auto"
+        }
+      ],
+      "filter": {
+        "scope": "all",
+        "categoryIds": null
+      }
+    },
+    {
+      "id": "lighting-cue-sheet",
+      "name": "Lighting Cue Sheet",
+      "orientation": "portrait",
+      "paper": "A4",
+      "pageMode": {
+        "kind": "flow"
+      },
+      "header": {
+        "sessionName": {
+          "show": true,
+          "align": "left"
+        },
+        "eventName": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionDateTime": {
+          "show": true,
+          "align": "right"
+        },
+        "logo": {
+          "show": true,
+          "align": "left"
+        },
+        "sessionSubtitle": {
+          "show": true,
+          "align": "left"
+        },
+        "personName": {
+          "show": true,
+          "align": "right"
+        }
+      },
+      "itemStyle": "table",
+      "columns": [
+        {
+          "key": "start",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "duration",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "title",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "lighting",
+          "visible": true,
+          "width": "auto"
+        },
+        {
+          "key": "end",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "number",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "category",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "people",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "notes",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "script",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "audio",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "video",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "camera",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "slides",
+          "visible": false,
+          "width": "auto"
+        },
+        {
+          "key": "imageSlide",
+          "visible": false,
+          "width": "auto"
+        }
+      ],
+      "filter": {
+        "scope": "all",
+        "categoryIds": null
+      }
+    }
+  ],
+  "event": {
+    "id": "easter-2027",
+    "name": "Easter Convention 2027",
+    "startDate": "2027-03-26",
+    "endDate": "2027-03-29",
+    "timeZone": "Australia/Brisbane",
+    "venue": "Main Auditorium"
+  },
+  "people": [
+    {
+      "id": "priya",
+      "name": "Priya Shah",
+      "role": "Producer",
+      "pack": {
+        "enabled": true,
+        "templates": [
+          {
+            "templateId": "producer-rundown",
+            "copies": 2
+          },
+          {
+            "templateId": "host-script",
+            "copies": 1
+          }
+        ],
+        "sides": "duplexLong",
+        "scaling": "fit",
+        "collate": true,
+        "newSheetPerTemplate": true,
+        "coverSheet": false
+      }
+    },
+    {
+      "id": "margaret",
+      "name": "Rev. Margaret Hill",
+      "role": "Speaker",
+      "pack": {
+        "enabled": true,
+        "templates": [
+          {
+            "templateId": "speaker-cue-cards",
+            "copies": 2
+          },
+          {
+            "templateId": "producer-rundown",
+            "copies": 1
+          }
+        ],
+        "sides": "duplexLong",
+        "scaling": "fit",
+        "collate": true,
+        "newSheetPerTemplate": true,
+        "coverSheet": false
+      }
+    },
+    {
+      "id": "sarah",
+      "name": "Sarah Nguyen",
+      "role": "Host",
+      "pack": {
+        "enabled": true,
+        "templates": [
+          {
+            "templateId": "host-script",
+            "copies": 1
+          },
+          {
+            "templateId": "speaker-cue-cards",
+            "copies": 1
+          }
+        ],
+        "sides": "single",
+        "scaling": "fit",
+        "collate": true,
+        "newSheetPerTemplate": true,
+        "coverSheet": false
+      }
+    },
+    {
+      "id": "josh",
+      "name": "Josh Patel",
+      "role": "Worship leader",
+      "pack": {
+        "enabled": true,
+        "templates": [
+          {
+            "templateId": "producer-rundown",
+            "copies": 1
+          }
+        ],
+        "sides": "single",
+        "scaling": "2up",
+        "collate": true,
+        "newSheetPerTemplate": true,
+        "coverSheet": false
+      }
+    },
+    {
+      "id": "liam",
+      "name": "Liam O'Connor",
+      "role": "Audio · FOH",
+      "pack": {
+        "enabled": true,
+        "templates": [
+          {
+            "templateId": "audio-sheet",
+            "copies": 2
+          }
+        ],
+        "sides": "single",
+        "scaling": "fit",
+        "collate": true,
+        "newSheetPerTemplate": true,
+        "coverSheet": false
+      }
+    },
+    {
+      "id": "tom",
+      "name": "Tom Becker",
+      "role": "Camera director",
+      "pack": {
+        "enabled": true,
+        "templates": [
+          {
+            "templateId": "camera-shot-list",
+            "copies": 2
+          }
+        ],
+        "sides": "duplexLong",
+        "scaling": "fit",
+        "collate": true,
+        "newSheetPerTemplate": true,
+        "coverSheet": false
+      }
+    },
+    {
+      "id": "ellie",
+      "name": "Ellie Ward",
+      "role": "Lighting",
+      "pack": {
+        "enabled": false,
+        "templates": [
+          {
+            "templateId": "lighting-cue-sheet",
+            "copies": 1
+          }
+        ],
+        "sides": "single",
+        "scaling": "fit",
+        "collate": true,
+        "newSheetPerTemplate": true,
+        "coverSheet": false
+      }
+    },
+    {
+      "id": "dave",
+      "name": "Dave Collins",
+      "role": "Pastor",
+      "pack": {
+        "enabled": false,
+        "templates": [
+          {
+            "templateId": "speaker-cue-cards",
+            "copies": 1
+          }
+        ],
+        "sides": "single",
+        "scaling": "fit",
+        "collate": true,
+        "newSheetPerTemplate": true,
+        "coverSheet": false
+      }
+    }
+  ],
+  "sessions": [
+    {
+      "id": "fri-opening",
+      "name": "Opening Night",
+      "startAt": "2027-03-26T19:00:00+10:00",
+      "items": []
+    },
+    {
+      "id": "sat-bible",
+      "name": "Morning Bible Study",
+      "startAt": "2027-03-27T09:30:00+10:00",
+      "items": []
+    },
+    {
+      "id": "sat-youth",
+      "name": "Youth Afternoon",
+      "startAt": "2027-03-27T14:00:00+10:00",
+      "items": []
+    },
+    {
+      "id": "sat-evening",
+      "name": "Saturday Evening Celebration",
+      "subtitle": "Main Auditorium · Youth & Families night",
+      "startAt": "2027-03-27T19:00:00+10:00",
+      "items": [
+        {
+          "id": "item01",
+          "order": "a0",
+          "title": "Walk-in loop",
+          "durationSec": 600,
+          "categoryId": "walkin",
+          "personIds": [
+            "priya"
+          ],
+          "av": {
+            "audio": "Playlist bed −20",
+            "video": "Loop + countdown",
+            "lighting": "Warm wash 60%",
+            "camera": "Wide only",
+            "slides": "Countdown"
+          },
+          "notes": "Doors 6:45",
+          "imageSlide": null
+        },
+        {
+          "id": "item02",
+          "order": "a1",
+          "title": "Welcome & notices",
+          "durationSec": 240,
+          "categoryId": "host",
+          "personIds": [
+            "sarah"
+          ],
+          "av": {
+            "audio": "HH-1 Sarah",
+            "video": "Notices loop",
+            "lighting": "Stage up, house 30%",
+            "camera": "Cam 2 MCU",
+            "slides": "Notices 1–6"
+          },
+          "notes": "From front row",
+          "script": "Welcome everyone… [notices 1–6]",
+          "imageSlide": null
+        },
+        {
+          "id": "item03",
+          "order": "a2",
+          "title": "Worship set",
+          "durationSec": 1080,
+          "categoryId": "music",
+          "personIds": [
+            "josh"
+          ],
+          "av": {
+            "audio": "Band scene 3",
+            "video": "Lyrics",
+            "lighting": "Song cues L10–L22",
+            "camera": "Cam 1 + 3 roam",
+            "slides": "ProPresenter"
+          },
+          "notes": "4 songs, no break",
+          "imageSlide": null
+        },
+        {
+          "id": "item04",
+          "order": "a3",
+          "title": "Prayer for the weekend",
+          "durationSec": 180,
+          "categoryId": "prayer",
+          "personIds": [
+            "dave"
+          ],
+          "av": {
+            "audio": "HH-2 Dave",
+            "video": "Lower third",
+            "lighting": "Stage 40%",
+            "camera": "Cam 2 MS"
+          },
+          "notes": "Band pads under",
+          "imageSlide": null
+        },
+        {
+          "id": "item05",
+          "order": "a4",
+          "title": "Kids program highlights",
+          "durationSec": 180,
+          "categoryId": "video",
+          "personIds": [
+            "priya"
+          ],
+          "av": {
+            "audio": "Video audio full",
+            "video": "VT1 full screen",
+            "lighting": "Stage black",
+            "camera": "Program = VT"
+          },
+          "notes": "Roll on host cue",
+          "imageSlide": null
+        },
+        {
+          "id": "item06",
+          "order": "a5",
+          "title": "Offering & announcements",
+          "durationSec": 300,
+          "categoryId": "offering",
+          "personIds": [
+            "sarah"
+          ],
+          "av": {
+            "audio": "HH-1, band soft",
+            "video": "Give QR",
+            "lighting": "Stage 60%",
+            "camera": "Cam 2 MCU",
+            "slides": "Give + notices"
+          },
+          "notes": "Ushers ready 7:37",
+          "script": "[Offering script]",
+          "imageSlide": null
+        },
+        {
+          "id": "item07",
+          "order": "a6",
+          "title": "Message — Risen Indeed",
+          "durationSec": 2100,
+          "categoryId": "spoken",
+          "personIds": [
+            "margaret",
+            "priya"
+          ],
+          "av": {
+            "audio": "Headset HS-2 (Margaret). Lectern mic as backup, muted. Walk-in bed out on handover.",
+            "video": "Sermon title",
+            "lighting": "Lectern special",
+            "camera": "Cam 2 MCU, Cam 1 wide on walks",
+            "slides": "Sermon deck 1–14, advanced from booth"
+          },
+          "notes": "Lectern centre stage. Water on shelf. 5-min and 1-min cards from front row.",
+          "script": "[Host hands over after offering music fades]\nMargaret walks on from stage left. Opens with Luke 24:1–6.\n[Sermon title slide on first word]\n…\n[At close: \"Let's stand as the band comes back\"] → Response song",
+          "imageSlide": {
+            "path": "seed/risen-indeed-title.png",
+            "name": "risen-indeed-title.png",
+            "width": 1920,
+            "height": 1080,
+            "contentType": "image/png"
+          }
+        },
+        {
+          "id": "item08",
+          "order": "a7",
+          "title": "Response song",
+          "durationSec": 360,
+          "categoryId": "music",
+          "personIds": [
+            "josh"
+          ],
+          "av": {
+            "audio": "Band scene 4",
+            "video": "Lyrics",
+            "lighting": "L23 slow build",
+            "camera": "Cam 3 roam",
+            "slides": "ProPresenter"
+          },
+          "notes": "Band on during close",
+          "imageSlide": null
+        },
+        {
+          "id": "item09",
+          "order": "a8",
+          "title": "Benediction",
+          "durationSec": 120,
+          "categoryId": "spoken",
+          "personIds": [
+            "margaret"
+          ],
+          "av": {
+            "audio": "HS-2",
+            "video": "Lower third",
+            "lighting": "Stage 60%",
+            "camera": "Cam 2 MS"
+          },
+          "script": "[Return to centre as song ends] Numbers 6:24–26. Walk-out loop starts on “Amen”.",
+          "imageSlide": null
+        },
+        {
+          "id": "item10",
+          "order": "a9",
+          "title": "Walk-out loop",
+          "durationSec": 900,
+          "categoryId": "walkin",
+          "personIds": [
+            "priya"
+          ],
+          "av": {
+            "audio": "Playlist up",
+            "video": "Thanks loop",
+            "lighting": "House 100%",
+            "camera": "Wide only",
+            "slides": "Tomorrow"
+          },
+          "notes": "Doors open",
+          "imageSlide": null
+        }
+      ]
+    },
+    {
+      "id": "sun-sunrise",
+      "name": "Sunrise Service",
+      "startAt": "2027-03-28T06:00:00+10:00",
+      "items": []
+    },
+    {
+      "id": "sun-service",
+      "name": "Easter Sunday Service",
+      "startAt": "2027-03-28T10:00:00+10:00",
+      "items": []
+    }
+  ],
+  "expected": {
+    "session": "sat-evening",
+    "runtime": "1:41:00",
+    "ends": "8:41 pm",
+    "starts": [
+      "7:00",
+      "7:10",
+      "7:14",
+      "7:32",
+      "7:35",
+      "7:38",
+      "7:43",
+      "8:18",
+      "8:24",
+      "8:26"
+    ],
+    "distinctPeople": 5
+  }
+}
