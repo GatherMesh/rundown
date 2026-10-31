@@ -3,6 +3,8 @@ import { ref } from 'vue';
 import { exportFile, Notify } from 'quasar';
 import { signOut } from 'firebase/auth';
 import { auth, emulator } from '../boot/firebase';
+import { useWorkspace } from '../stores/workspace';
+const workspace = useWorkspace();
 const open = defineModel<boolean>({ required: true });
 const busy = ref(false);
 const projectId = auth.app.options.projectId;
@@ -43,6 +45,7 @@ async function downloadCredentials() {
 async function revoke() {
   busy.value = true;
   try {
+    await workspace.flush();
     const token = await auth.currentUser?.getIdToken();
     const response = await fetch(`${emulator ? apiUrl : '/api/v1'}/auth_revoke`, {
       method: 'POST',

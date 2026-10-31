@@ -11,7 +11,7 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase-admin/firestore';
 import type { Auth, DecodedIdToken } from 'firebase-admin/auth';
-import { getStorage, getDownloadURL } from 'firebase-admin/storage';
+import { getStorage } from 'firebase-admin/storage';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { generateKeyBetween } from 'fractional-indexing';
 import { operations, recordSchemas, type Resource } from './api-contract';
@@ -130,7 +130,18 @@ export class RundownService {
             if (!(await file.exists())[0])
               fail('not-found', 'Image file does not exist. Upload it first.');
             // The preview consumes the same Firebase download URL as browser uploads.
-            image.url = await getDownloadURL(file);
+            const [metadata] = await file.getMetadata();
+            const token = String(metadata.metadata?.firebaseStorageDownloadTokens ?? '').split(
+              ',',
+            )[0];
+            if (!token)
+              fail(
+                'failed-precondition',
+                'Image has no download token. Upload it through Rundown first.',
+              );
+            const endpoint =
+              process.env.STORAGE_EMULATOR_HOST || 'https://firebasestorage.googleapis.com';
+            image.url = `${endpoint}/v0/b/${file.bucket.name}/o/${encodeURIComponent(file.name)}?alt=media&token=${encodeURIComponent(token)}`;
           }
         }
         if (resource === 'events') {
