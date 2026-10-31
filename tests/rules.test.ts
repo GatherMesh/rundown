@@ -17,6 +17,7 @@ import {
 import { ref, uploadBytes, getBytes } from 'firebase/storage';
 import { readFileSync } from 'node:fs';
 import { defaultPack } from '../app/src/types';
+import seed from '../reference/seed.json';
 let env: RulesTestEnvironment;
 beforeAll(async () => {
   env = await initializeTestEnvironment({
@@ -89,6 +90,35 @@ it('allows editor data changes but prevents escalation and export-job forgery', 
   await assertSucceeds(updateDoc(doc(db, 'tenants/a/events/event'), { name: 'Changed' }));
   await assertFails(updateDoc(doc(db, 'tenants/a/members/editor'), { role: 'owner' }));
   await assertFails(setDoc(doc(db, 'tenants/a/exportJobs/job'), { status: 'complete' }));
+});
+it.each(['owner', 'editor'])('allows %s to create and switch to Dense Cards', async (role) => {
+  const db = env.authenticatedContext(role).firestore();
+  const template = doc(db, `tenants/a/templates/dense-${role}`);
+  const { id, ...data } = seed.templates[0];
+  await assertSucceeds(setDoc(template, { ...data, itemStyle: 'cards' }));
+  await assertSucceeds(
+    updateDoc(template, { itemStyle: 'denseCards', updatedAt: Timestamp.now() }),
+  );
+  expect((await getDoc(template)).data()?.itemStyle).toBe('denseCards');
+  await assertSucceeds(setDoc(template, { ...data, itemStyle: 'denseCards' }));
+  await assertFails(updateDoc(template, { itemStyle: 'unknown' }));
+});
+it('blocks Dense Cards writes by viewers, non-members and signed-out users', async () => {
+  const path = 'tenants/a/templates/restricted';
+  const { id, ...data } = seed.templates[0];
+  await env.withSecurityRulesDisabled(async (c) =>
+    setDoc(doc(c.firestore(), path), { ...data, itemStyle: 'cards' }),
+  );
+  for (const context of [
+    env.authenticatedContext('viewer'),
+    env.authenticatedContext('outsider'),
+    env.unauthenticatedContext(),
+  ]) {
+    await assertFails(updateDoc(doc(context.firestore(), path), { itemStyle: 'denseCards' }));
+    await assertFails(
+      setDoc(doc(context.firestore(), `${path}-new`), { ...data, itemStyle: 'denseCards' }),
+    );
+  }
 });
 it('requires atomic tenant-owner bootstrap and immutable creator', async () => {
   const db = env.authenticatedContext('new').firestore();
