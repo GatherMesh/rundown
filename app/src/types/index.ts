@@ -56,6 +56,7 @@ export interface PackTemplateRef {
 
 export interface PackSettings {
   enabled: boolean;
+  sessionIds?: string[]; // omitted = all sessions (legacy packs); [] = none
   templates: PackTemplateRef[]; // ordered
   sides: Sides;
   scaling: Scaling;
@@ -66,6 +67,7 @@ export interface PackSettings {
 
 export const defaultPack = (): PackSettings => ({
   enabled: false,
+  sessionIds: [],
   templates: [],
   sides: 'single',
   scaling: 'fit',
@@ -128,7 +130,7 @@ export interface ComputedItem extends Item {
 
 export type HeaderField =
   'sessionName' | 'eventName' | 'sessionDateTime' | 'logo' | 'sessionSubtitle' | 'personName';
-export type ItemStyle = 'table' | 'cards' | 'cueCard' | 'compact';
+export type ItemStyle = 'table' | 'cards' | 'denseCards' | 'cueCard' | 'compact';
 export type ColumnKey =
   | 'start'
   | 'duration'
@@ -161,6 +163,7 @@ export interface Template {
   orientation: 'portrait' | 'landscape';
   paper: 'A4';
   pageMode: { kind: 'flow' } | { kind: 'fit'; pages: number };
+  headerPages?: 'all' | 'first'; // omitted = all pages for existing templates
   header: Record<HeaderField, { show: boolean; align: 'left' | 'right' }>;
   itemStyle: ItemStyle;
   columns: TemplateColumn[];

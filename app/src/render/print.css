@@ -210,6 +210,18 @@
   flex: 1;
   color: #3d4350;
 }
+.print-gap {
+  border-top: 1px dashed #5b6270;
+  border-bottom: 1px dashed #5b6270;
+  padding: 6px 0;
+  margin-bottom: 12px;
+  text-align: center;
+  color: #5b6270;
+  font-size: 12px;
+}
+.print-item-group {
+  display: flow-root;
+}
 .print-context small {
   text-transform: uppercase;
   font-size: 9px;
@@ -364,4 +376,47 @@
 .print-table-row {
   margin-bottom: 0;
   padding: 6px 0;
+}
+
+.print-dense-card {
+  padding: 8px 10px;
+  gap: 4px 10px;
+  border-width: 1px;
+  border-radius: 6px;
+}
+.print-dense-card .print-card-heading {
+  gap: 10px;
+}
+.print-dense-card .print-card-heading > div:first-child {
+  min-width: 0;
+}
+.print-dense-card h2 {
+  font-size: 16px;
+  margin-top: 2px;
+}
+.print-dense-card .print-card-timing {
+  gap: 8px;
+}
+.print-dense-card .print-card-timing span {
+  font-size: 12px;
+}
+.print-dense-card .print-field {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  flex: none;
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.print-dense-card .print-field small {
+  margin: 0;
+  padding-top: 2px;
+}
+.print-dense-card .field-script {
+  background: transparent;
+  padding: 0;
+}
+.print-dense-card .print-slide {
+  max-height: 80px;
 }

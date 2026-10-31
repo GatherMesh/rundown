@@ -102,7 +102,7 @@ Send this to `items_create`. New items append to the session; use `items_reorder
 | `templates_duplicate`                             | Tenant scope plus `id`, optional `name`     | Editor/owner                                   |
 | `sessions_rundown`                                | Full session scope                          | Member                                         |
 | `packs_set`                                       | Event scope plus `personId`, `pack`         | Editor/owner                                   |
-| `exports_render`                                  | Session scope, optional `personId`          | Member                                         |
+| `exports_render`                                  | Event scope, optional `sessionId`, `personId`          | Member                                         |
 | `exports_list`, `exports_get`                     | `tenantId`; get also takes `jobId`          | Member                                         |
 | `assets_upload`, `assets_remove`                  | See below                                   | Tenant logo: owner; other images: editor/owner |
 | `auth_revoke`                                     | None                                        | Recently signed-in user                        |
@@ -117,7 +117,7 @@ Session moves match assigned people by email or name/role, creating missing dest
 
 `assets_upload` takes `tenantId`, `name`, `contentType` (`image/png` or `image/jpeg`) and raw `base64` (no data-URL prefix). Omit the other IDs for a tenant logo, supply `eventId` for an event logo, or supply `eventId`, `sessionId`, `itemId` for a slide. The server validates the bytes, reads dimensions, uploads to a server-generated tenant path, and attaches the image. Images are limited to 10 MiB. Existing Firebase download URLs are generated for app previews, as with browser uploads. `assets_remove` detaches the reference; bytes remain because duplicates may share them.
 
-`exports_render` renders one person when `personId` is supplied, otherwise all enabled packs. It returns `jobId`, `path`, PDF page/sheet counts and warnings. The call completes after rendering. Another client can inspect `exports_list`/`exports_get` while it runs. Failed jobs remain available there. Do not automatically retry a timed-out export: check its job first. The original `renderPack` and `renderAllPacks` callable functions remain available.
+`exports_render` renders one person when `personId` is supplied, otherwise all enabled people’s packs. Omit `sessionId` to include each recipient’s checked sessions (`pack.sessionIds`); supply it to print just that checked session. Omitted `sessionIds` on legacy packs means all event sessions, and `[]` means none. It returns `jobId`, `path`, PDF page/sheet counts and warnings. The call completes after rendering. Another client can inspect `exports_list`/`exports_get` while it runs. Failed jobs remain available there. Do not automatically retry a timed-out export: check its job first. The original `renderPack` and `renderAllPacks` callable functions remain available.
 
 Download the returned `path` through `GET /files` with the bearer token, or `rundown_download_file`. MCP downloads stream into newly created files with restricted permissions. Exports use the same shared renderer and print settings as the application.
 
@@ -128,7 +128,7 @@ Download the returned `path` through `GET /files` with the bearer token, or `run
 - Referenced categories/templates cannot be deleted, including template references in disabled packs and category filters in templates. Archive them or remove the references first.
 - Events must have no sessions or people. Organisations must have no events, categories, templates or export jobs. Empty organisation deletion also removes memberships/profile entries. Export/cache cleanup remains an administrator task; this API deliberately has no recursive organisation purge.
 - Mutations refuse work requiring more than 450 writes or a scanned collection over 450 records. No partial batch is applied. Reduce the selection/workspace first; list endpoints remain paginated. The existing app has a separate callable for large session deletion.
-- The API accepts bodies up to 14 MiB. PDF export limits remain 100 recipients, 500 session items and 1,000 printed sides per pack, with 1–20 copies per template.
+- The API accepts bodies up to 14 MiB. PDF export limits remain 100 recipients, 100 sessions, 500 items per session and 1,000 printed sides per pack, with 1–20 copies per template.
 - MCP is a local stdio server; the HTTP API is not a remote Streamable HTTP MCP/OAuth endpoint.
 
 ## Verification

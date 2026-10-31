@@ -2,7 +2,7 @@ import type { Template, Person } from '../types';
 import type { useWorkspace } from '../stores/workspace';
 import type { RenderPayload } from './renderer';
 export function payload(
-  w: ReturnType<typeof useWorkspace>,
+  w: Pick<ReturnType<typeof useWorkspace>, 'session' | 'event' | 'tenant' | 'orderedItems'>,
   template: Template,
   person: Person | null,
 ): RenderPayload {

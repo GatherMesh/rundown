@@ -154,6 +154,42 @@ try {
     await signInWithEmailAndPassword(clientAuth, email, password);
     console.log('Storage denies non-members and signed-out users.');
   }
+  const selection = db.batch();
+  for (const p of seed.people)
+    selection.update(ev.collection('people').doc(p.id), {
+      'pack.enabled': ['margaret', 'josh'].includes(p.id),
+      'pack.sessionIds': p.id === 'margaret' ? ['fri-opening', 'sat-evening'] : ['sat-evening'],
+    });
+  await selection.commit();
+  for (const [name, expectedPages, expectedSheets] of [
+    ['renderPack', 12, 6],
+    ['renderAllPacks', 14, 7],
+  ]) {
+    const response = await fetch(
+      `https://australia-southeast1-${projectId}.cloudfunctions.net/${name}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${signed.idToken}` },
+        body: JSON.stringify({
+          data: { tenantId: tag, eventId, personId: 'margaret', jobId: randomUUID() },
+        }),
+      },
+    );
+    const result = await response.json();
+    if (!response.ok || result.error) throw new Error(JSON.stringify(result));
+    const bytes = await getBytes(ref(clientStorage, result.result.path));
+    const pdf = await PDFDocument.load(bytes);
+    if (pdf.getPageCount() !== expectedPages || result.result.sheets !== expectedSheets)
+      throw new Error('Unexpected multi-session counts: ' + JSON.stringify(result.result));
+    console.log(
+      JSON.stringify({
+        function: name,
+        scope: 'selected sessions',
+        sheets: expectedSheets,
+        pdfSides: pdf.getPageCount(),
+      }),
+    );
+  }
   const denied = await fetch(
     `https://australia-southeast1-${projectId}.cloudfunctions.net/renderPack`,
     {

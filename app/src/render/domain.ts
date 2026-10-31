@@ -90,13 +90,26 @@ export function filterItems(
       : [];
   });
 }
-export function paginate(heights: number[], available: number, onePerPage = false): number[][] {
-  if (available <= 0) throw new Error('Page header leaves no room for items.');
+export function itemGapLabel(previous: ComputedItem | undefined, next: ComputedItem): string {
+  if (!previous || next.number <= previous.number + 1) return '';
+  const first = previous.number + 1,
+    last = next.number - 1;
+  return `${first === last ? `Item ${first}` : `Items ${first}–${last}`} omitted · ${formatDuration(next.startSec - previous.endSec)}`;
+}
+export function paginate(
+  heights: number[],
+  available: number,
+  onePerPage = false,
+  subsequentAvailable = available,
+): number[][] {
+  if (available <= 0 || subsequentAvailable <= 0)
+    throw new Error('Page header leaves no room for items.');
   const pages: number[][] = [];
   let page: number[] = [],
     used = 0;
   heights.forEach((h, i) => {
-    if (page.length && (onePerPage || used + h > available)) {
+    const capacity = pages.length === 0 ? available : subsequentAvailable;
+    if (page.length && (onePerPage || used + h > capacity)) {
       pages.push(page);
       page = [];
       used = 0;
@@ -112,12 +125,14 @@ export function fitPagination(
   available: number,
   requested?: number,
   onePerPage = false,
+  subsequentAvailable = available,
 ) {
   const at = (s: number) =>
     paginate(
       heights.map((h) => h * s),
       available,
       onePerPage,
+      subsequentAvailable,
     );
   if (!requested || at(1).length <= requested) return { pages: at(1), scale: 1, warning: null };
   if (at(0.6).length > requested)

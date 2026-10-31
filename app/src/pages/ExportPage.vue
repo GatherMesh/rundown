@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue';
 import { httpsCallable } from 'firebase/functions';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { getBlob, ref as storageRef } from 'firebase/storage';
 import { Notify } from 'quasar';
 import { functions, db, storage } from '../boot/firebase';
 import { useWorkspace } from '../stores/workspace';
 import { payload } from '../render/payload';
 import { renderDocument } from '../render/renderer';
-import { planPack } from '../render/domain';
-import type { PackSettings, Person } from '../types';
+import { computeItems, planPack } from '../render/domain';
+import { includesSession } from '../render/pack-selection';
+import type { Item, PackSettings, Person, Session } from '../types';
 const w = useWorkspace(),
   selected = ref('margaret'),
-  counts = ref<Record<string, Record<string, number>>>({}),
+  counts = ref<Record<string, Record<string, Record<string, number>>>>({}),
+  sessionItems = ref<Record<string, Item[]>>({}),
+  previewSessionId = ref(''),
   busy = ref(false),
   calculating = ref(false),
   progress = ref(''),
@@ -33,16 +36,70 @@ const scalingOptions = [
   { label: '2 per sheet', value: '2up', icon: 'view_column' },
   { label: '4 per sheet', value: '4up', icon: 'grid_view' },
 ];
-function plan(p: Person) {
+const previewSession = computed(
+  () => w.sessions.find((s) => s.id === previewSessionId.value) ?? w.sessions[0],
+);
+function enabledSessions(p: Person) {
+  return w.sessions.filter((s) => includesSession(p.pack, s.id));
+}
+function toggleSession(sessionId: string, enabled: boolean) {
+  if (!person.value) return;
+  const ids = new Set(enabledSessions(person.value).map((s) => s.id));
+  if (enabled) ids.add(sessionId);
+  else ids.delete(sessionId);
+  if (ids.size > 100) {
+    Notify.create({ type: 'warning', message: 'Choose up to 100 sessions per person.' });
+    return;
+  }
+  patch({ sessionIds: [...ids] });
+}
+function sessionDate(s: Session) {
+  return new Intl.DateTimeFormat('en-AU', {
+    timeZone: w.event?.timeZone ?? 'Australia/Brisbane',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(s.startAt.toDate());
+}
+function plan(p: Person, sessionId = previewSession.value?.id) {
+  if (!sessionId || !counts.value[sessionId]?.[p.id]) return null;
   try {
-    return planPack(p.pack, counts.value[p.id] ?? {});
+    return planPack(p.pack, counts.value[sessionId][p.id]);
   } catch {
     return null;
   }
 }
-const totalSheets = computed(() =>
-  w.people.filter((p) => p.pack.enabled).reduce((n, p) => n + (plan(p)?.sheets ?? 0), 0),
+function personTotals(p: Person) {
+  let pages = 0,
+    sheets = 0;
+  for (const session of enabledSessions(p)) {
+    const result = plan(p, session.id);
+    if (!result) return null;
+    pages += result.pages;
+    sheets += result.sheets;
+  }
+  return { pages, sheets };
+}
+const enabledPeople = computed(() =>
+  w.people.filter((p) => p.pack.enabled && enabledSessions(p).length),
 );
+const totalSheets = computed(() => {
+  let sheets = 0;
+  for (const p of enabledPeople.value) {
+    const total = personTotals(p);
+    if (!total) return '…';
+    sheets += total.sheets;
+  }
+  return sheets;
+});
+const sheetLayout = computed(() => {
+  const p = person.value;
+  if (!p) return [];
+  const sides = plan(p)?.sides ?? [],
+    perSheet = p.pack.sides === 'single' ? 1 : 2;
+  return Array.from({ length: Math.ceil(sides.length / perSheet) }, (_, index) =>
+    sides.slice(index * perSheet, (index + 1) * perSheet),
+  );
+});
 function patch(part: Partial<PackSettings>, p = person.value) {
   if (p) w.patchPerson(p.id, { pack: { ...p.pack, ...part } });
 }
@@ -70,46 +127,85 @@ function reorder(index: number) {
   refs.splice(index, 0, moved);
   patch({ templates: refs });
 }
+// Export listens to the event's sessions without changing the session open in the editor.
+watch(
+  () => [w.tenantId, w.eventId, w.sessions.map((s) => s.id).join(',')],
+  (_, __, cleanup) => {
+    sessionItems.value = {};
+    if (!w.tenantId || !w.eventId) return;
+    const stops = w.sessions.map((s) =>
+      onSnapshot(
+        collection(db, `${w.eventPath()}/sessions/${s.id}/items`),
+        (snapshot) => {
+          sessionItems.value[s.id] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Item);
+        },
+        w.fail,
+      ),
+    );
+    cleanup(() => stops.forEach((stop) => stop()));
+  },
+  { immediate: true },
+);
 let timer: ReturnType<typeof setTimeout>,
   version = 0;
 watch(
   () =>
     JSON.stringify([
-      w.orderedItems,
+      sessionItems.value,
+      w.categories,
       w.templates,
+      w.sessions,
+      w.event,
+      w.tenant,
+      previewSession.value?.id,
+      person.value?.id,
       w.people.map((p) => ({
         id: p.id,
         name: p.name,
         role: p.role,
+        sessionIds: p.pack.sessionIds,
         templates: p.pack.templates.map((t) => t.templateId),
       })),
-      w.session,
-      w.event,
-      w.tenant,
     ]),
   () => {
     const run = ++version;
     clearTimeout(timer);
     calculating.value = true;
     counts.value = {};
+    warning.value = '';
     timer = setTimeout(async () => {
-      if (!w.session) {
-        calculating.value = false;
-        return;
-      }
-      const next: Record<string, Record<string, number>> = {},
+      const next: typeof counts.value = {},
         warnings = new Set<string>();
       try {
-        for (const p of w.people) {
-          next[p.id] = {};
-          for (const t of p.pack.templates) {
-            if (run !== version) return;
-            const template = w.templates.find((v) => v.id === t.templateId);
-            if (!template)
-              throw new Error('A pack references a missing template. Remove it or select another.');
-            const r = await renderDocument(payload(w, template, p));
-            next[p.id][t.templateId] = r.pageCount;
-            if (r.warning) warnings.add(`${p.name}: ${r.warning}`);
+        for (const session of w.sessions) {
+          if (!sessionItems.value[session.id]) continue;
+          const orderedItems = computeItems(sessionItems.value[session.id], w.categories, w.people);
+          next[session.id] = {};
+          for (const p of w.people) {
+            if (!includesSession(p.pack, session.id) && p.id !== person.value?.id) continue;
+            next[session.id][p.id] = {};
+            for (const t of p.pack.templates) {
+              if (run !== version) return;
+              const template = w.templates.find((v) => v.id === t.templateId);
+              if (!template) {
+                warnings.add(`${p.name}: a pack references a missing template.`);
+                continue;
+              }
+              const r = await renderDocument(
+                payload(
+                  {
+                    session,
+                    orderedItems,
+                    tenant: w.tenant,
+                    event: w.event,
+                  },
+                  template,
+                  p,
+                ),
+              );
+              next[session.id][p.id][t.templateId] = r.pageCount;
+              if (r.warning) warnings.add(`${p.name} · ${session.name}: ${r.warning}`);
+            }
           }
         }
         if (run === version) {
@@ -130,8 +226,8 @@ onUnmounted(() => {
   version++;
   if (pdfUrl.value) URL.revokeObjectURL(pdfUrl.value);
 });
-async function generate(action: 'download' | 'print' | 'preview', p?: Person) {
-  if (!w.session) return;
+async function generate(action: 'download' | 'print' | 'preview', p?: Person, session?: Session) {
+  if (busy.value || !w.event || !w.sessions.length) return;
   busy.value = true;
   progress.value = 'Preparing session packs…';
   const jobId = crypto.randomUUID();
@@ -151,7 +247,7 @@ async function generate(action: 'download' | 'print' | 'preview', p?: Person) {
     const result = await call({
       tenantId: w.tenantId,
       eventId: w.eventId,
-      sessionId: w.sessionId,
+      ...(session ? { sessionId: session.id } : {}),
       jobId,
       ...(p ? { personId: p.id } : {}),
     });
@@ -163,17 +259,18 @@ async function generate(action: 'download' | 'print' | 'preview', p?: Person) {
     if (action === 'download') {
       const a = document.createElement('a');
       a.href = pdfUrl.value;
-      a.download = `${w.session.name}-${p?.name ?? 'all-packs'}.pdf`;
+      a.download = `${session?.name ?? w.event.name}-${p?.name ?? 'all-packs'}.pdf`;
       a.click();
     } else if (action === 'preview') {
       pdfOpen.value = true;
     } else {
       Notify.create({
-        message: p
-          ? p.pack.sides === 'single'
-            ? 'Print single-sided.'
-            : `Print two-sided, flip on ${p.pack.sides === 'duplexShort' ? 'short' : 'long'} edge.`
-          : 'Print two-sided, flip on long edge.',
+        message:
+          p && session
+            ? p.pack.sides === 'single'
+              ? 'Print single-sided.'
+              : `Print two-sided, flip on ${p.pack.sides === 'duplexShort' ? 'short' : 'long'} edge.`
+            : 'Print two-sided, flip on long edge.',
         timeout: 12000,
       });
       const frame = document.createElement('iframe');
@@ -216,41 +313,26 @@ const initials = (p: Person) =>
       <div class="section-heading export-heading">
         <div>
           <h1>Session packs</h1>
-          <div class="export-session">
-            <span class="muted">For</span
-            ><q-select
-              :model-value="w.sessionId"
-              :options="w.sessions"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              outlined
-              dense
-              aria-label="Export session"
-              @update:model-value="w.selectSession"
-            />
-          </div>
+          <p class="muted">{{ w.event?.name || 'Select an event' }}</p>
         </div>
         <div class="button-row">
           <span class="muted"
-            ><strong>{{ w.people.filter((p) => p.pack.enabled).length }}</strong> of
-            {{ w.people.length }} people ·
+            ><strong>{{ enabledPeople.length }}</strong> of {{ w.people.length }} people ·
             <strong>{{ calculating ? '…' : totalSheets }}</strong> sheets</span
           ><q-btn
             outline
             no-caps
             label="Download all (PDF)"
             :loading="busy"
-            :disable="!w.session || !w.people.some((p) => p.pack.enabled)"
+            :disable="!enabledPeople.length"
             @click="generate('download')"
           /><q-btn
             color="primary"
             no-caps
             icon="print"
-            label="Print all packs"
+            label="Print All"
             :loading="busy"
-            :disable="!w.session || !w.people.some((p) => p.pack.enabled)"
+            :disable="!enabledPeople.length"
             @click="generate('print')"
           />
         </div>
@@ -267,7 +349,7 @@ const initials = (p: Person) =>
                 <th>Export</th>
                 <th>Person</th>
                 <th>Templates</th>
-                <th>Sides</th>
+                <th>Sessions</th>
                 <th>Scaling</th>
                 <th>Sheets</th>
                 <th></th>
@@ -308,16 +390,17 @@ const initials = (p: Person) =>
                     ×{{ t.copies }}</span
                   ><span v-if="!p.pack.templates.length" class="muted">No templates selected</span>
                 </td>
-                <td>{{ p.pack.sides === 'single' ? 'Single' : 'Double' }}</td>
+                <td>{{ enabledSessions(p).length }} of {{ w.sessions.length }}</td>
                 <td>{{ scalingOptions.find((v) => v.value === p.pack.scaling)?.label }}</td>
-                <td>{{ p.pack.enabled ? (plan(p)?.sheets ?? '…') : '—' }}</td>
+                <td>{{ p.pack.enabled ? (personTotals(p)?.sheets ?? '…') : '—' }}</td>
                 <td>
                   <q-btn
                     outline
                     no-caps
                     dense
-                    label="Print"
-                    :disable="busy || !p.pack.enabled || !p.pack.templates.length"
+                    label="Print all"
+                    :aria-label="'Print all sessions for ' + p.name"
+                    :disable="busy || !enabledSessions(p).length || !p.pack.templates.length"
                     @click.stop="generate('print', p)"
                   />
                 </td>
@@ -333,8 +416,8 @@ const initials = (p: Person) =>
         </div>
       </section>
       <p class="muted export-note">
-        Each pack prints with the recipient’s name. Pack settings apply to every session in this
-        event.
+        Choose a person to select their sessions. Print All includes every enabled person’s selected
+        sessions, grouped by person. Each session pack starts on a new sheet.
       </p>
     </main>
     <aside v-if="person" class="detail-panel pack-panel">
@@ -343,14 +426,69 @@ const initials = (p: Person) =>
         <div>
           <h2>{{ person.name }}</h2>
           <small
-            >{{ person.role }} · on
-            {{ w.items.filter((i) => i.personIds.includes(person!.id)).length }} items</small
+            >{{ person.role || 'No role' }} · {{ enabledSessions(person).length }} sessions
+            selected</small
           >
         </div>
       </div>
+      <section class="pack-sessions">
+        <h3>Sessions for {{ person.name }}</h3>
+        <p class="muted">Tick the sessions they receive sheets for.</p>
+        <div v-for="session in w.sessions" :key="session.id" class="pack-session-row">
+          <q-checkbox
+            :model-value="includesSession(person.pack, session.id)"
+            :disable="!w.canEdit || busy"
+            :aria-label="'Include ' + session.name + ' for ' + person.name"
+            @update:model-value="(v) => toggleSession(session.id, v)"
+          />
+          <div class="pack-session-name">
+            <strong>{{ session.name }}</strong>
+            <small>{{ sessionDate(session) }}</small>
+            <small>{{ plan(person, session.id)?.sheets ?? '…' }} sheets</small>
+          </div>
+          <div class="pack-session-actions">
+            <q-btn
+              flat
+              dense
+              no-caps
+              label="Preview"
+              :disable="
+                busy || !includesSession(person.pack, session.id) || !person.pack.templates.length
+              "
+              :aria-label="'Preview ' + session.name + ' for ' + person.name"
+              @click="generate('preview', person, session)"
+            />
+            <q-btn
+              outline
+              dense
+              no-caps
+              icon="print"
+              label="Print"
+              :disable="
+                busy || !includesSession(person.pack, session.id) || !person.pack.templates.length
+              "
+              :aria-label="'Print ' + session.name + ' for ' + person.name"
+              @click="generate('print', person, session)"
+            />
+          </div>
+        </div>
+        <p v-if="!w.sessions.length" class="muted">Add sessions to this event to print sheets.</p>
+        <p v-else-if="!enabledSessions(person).length" class="muted">No sessions selected.</p>
+        <q-btn
+          color="primary"
+          no-caps
+          icon="print"
+          label="Print all for person"
+          class="full-width q-mt-sm"
+          :loading="busy"
+          :disable="!enabledSessions(person).length || !person.pack.templates.length"
+          @click="generate('print', person)"
+        />
+      </section>
       <fieldset :disabled="!w.canEdit" class="form-stack">
         <section>
           <label class="eyebrow">Templates in this pack</label>
+          <p class="muted">These templates apply to every selected session.</p>
           <div
             v-for="(r, index) in person.pack.templates"
             :key="index"
@@ -364,8 +502,8 @@ const initials = (p: Person) =>
                 w.templates.find((t) => t.id === r.templateId)?.name || 'Missing template'
               }}</strong
               ><small
-                >{{ w.templates.find((t) => t.id === r.templateId)?.orientation }} ·
-                {{ counts[person.id]?.[r.templateId] ?? '…' }} pages</small
+                >{{ w.templates.find((t) => t.id === r.templateId)?.orientation }} · same templates
+                for each selected session</small
               >
             </div>
             <div class="copies-control">
@@ -465,28 +603,74 @@ const initials = (p: Person) =>
           </div>
         </section>
       </fieldset>
+      <section v-if="w.sessions.length" class="pack-sheet-layout">
+        <h3>Sheet layout</h3>
+        <q-select
+          :model-value="previewSession?.id"
+          :options="w.sessions"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          outlined
+          dense
+          label="Preview sheet layout for session"
+          @update:model-value="(v) => (previewSessionId = v)"
+        />
+        <p class="muted">
+          {{ plan(person)?.pages ?? '…' }} pages · {{ plan(person)?.sheets ?? '…' }} sheets
+        </p>
+        <p v-if="person.pack.sides !== 'single'" class="muted">
+          Each pair prints on one sheet.
+          <template v-if="['fit', 'actual'].includes(person.pack.scaling)">
+            If the back has a different orientation, it rotates 90° to match the front’s paper
+            orientation.
+          </template>
+        </p>
+        <ol class="pack-sheet-list">
+          <li v-for="(sheet, sheetIndex) in sheetLayout" :key="sheetIndex">
+            <strong>Sheet {{ sheetIndex + 1 }}</strong>
+            <div v-for="(side, sideIndex) in sheet" :key="sideIndex" class="pack-sheet-side">
+              <b>{{ sideIndex === 0 ? 'Front' : 'Back' }}</b>
+              <div>
+                <span v-if="side.kind === 'blank'" class="muted">Blank</span>
+                <span v-else-if="side.kind === 'cover'">Cover sheet</span>
+                <template v-else>
+                  <div v-for="(cell, cellIndex) in side.cells" :key="cellIndex">
+                    {{
+                      w.templates.find((t) => t.id === cell.templateId)?.name || 'Missing template'
+                    }}
+                    · page {{ cell.page }} · copy {{ cell.copy }}
+                  </div>
+                </template>
+              </div>
+            </div>
+          </li>
+        </ol>
+      </section>
       <div class="pack-summary">
         <div>
-          <span>Pages</span><strong>{{ plan(person)?.pages ?? '…' }}</strong>
+          <span>Pages across selected sessions</span
+          ><strong>{{ personTotals(person)?.pages ?? '…' }}</strong>
         </div>
         <div>
           <span>Sheets ({{ person.pack.sides === 'single' ? 'single' : 'double' }}-sided)</span
-          ><strong>{{ plan(person)?.sheets ?? '…' }}</strong>
+          ><strong>{{ personTotals(person)?.sheets ?? '…' }}</strong>
         </div>
         <div class="button-row">
           <q-btn
             outline
             no-caps
-            label="Preview PDF"
+            label="Preview all (PDF)"
             :loading="busy"
-            :disable="!person.pack.templates.length"
+            :disable="!enabledSessions(person).length || !person.pack.templates.length"
             @click="generate('preview', person)"
           /><q-btn
             color="primary"
             no-caps
-            label="Print pack"
+            label="Print all for person"
             :loading="busy"
-            :disable="!person.pack.templates.length"
+            :disable="!enabledSessions(person).length || !person.pack.templates.length"
             @click="generate('print', person)"
           />
         </div>

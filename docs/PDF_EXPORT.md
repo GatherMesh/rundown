@@ -39,11 +39,19 @@ Fonts (Inter 400/500/600/700, JetBrains Mono 400/500) are bundled as local woff2
    "[Person name]".
 
 Numbers and start times always come from the **full** session, not the filtered list.
+When consecutive visible items have omitted items between them, show a dashed separator with
+the omitted item numbers and their total duration. Keep it with the next visible item when
+paginating (and only on the first segment of a continued cue card). This also exposes gaps
+caused by category filters; leading/trailing omissions do not add separators.
 
 ## 3. Render + paginate
 
 Page boxes in CSS px at 96 dpi: A4 portrait **794 × 1123**, landscape **1123 × 794**.
-Margins 40–48 px (see PNGs). Each page = header (every page) + body + footer.
+Margins 40–48 px (see PNGs). Each page = optional header + body + footer.
+`template.headerPages` selects `all` (default when omitted) or `first`. First-page-only headers
+leave the full body space available on subsequent pages, including fit mode and cue continuations.
+Table column headings still repeat. Footer page numbers appear on every page and count within
+each template document, restarting for each template/copy (not across the assembled pack).
 
 - **Header**: fields per `template.header`; left group = logo + session name (h1) + event/subtitle
   line; right group = "Prepared for" + person name + date & time. Hidden fields collapse.
@@ -55,6 +63,9 @@ Margins 40–48 px (see PNGs). Each page = header (every page) + body + footer.
   - `cards` — one bordered card per item: category · item no., title, start/length/finish,
     then each visible field as a labelled block; image slide as a 16:9 thumbnail. Context items
     render as a single compact line.
+  - `denseCards` — the same single-column cards with tighter padding, smaller headings, inline
+    field labels and smaller image thumbnails. Body text stays at 12 px; filtering, highlighting,
+    field order and whole-card pagination behave like `cards`.
   - `cueCard` — **one item per page**, large type (script 15–18 px, line-height 1.6). A script
     longer than the page continues on following pages with "(cont.)" in the title.
   - `compact` — one line per item: start · title · people, with selected AV fields as a second line.
@@ -73,8 +84,13 @@ The in-app preview renders the same components inside a scaled container.
 
 ## 4. Pack assembly (Cloud Function)
 
-`renderPack({ tenantId, eventId, sessionId, personId })` and
-`renderAllPacks({ tenantId, eventId, sessionId })` — callable functions.
+`renderPack({ tenantId, eventId, sessionId?, personId, jobId })` and
+`renderAllPacks({ tenantId, eventId, sessionId?, jobId })` — callable functions.
+Omit `sessionId` to render each recipient's checked sessions; supply it for just that session
+(which must be checked for that recipient). Disabled people are excluded from global exports.
+Explicit single-person exports remain available regardless of their global enable switch.
+Deleted or moved-away session IDs are ignored. New packs start with no sessions; legacy packs
+without `sessionIds` include all sessions. Sessions are ordered by start time within each person.
 
 1. For each template in the person's pack, render one **document** (Puppeteer:
    `page.pdf({ preferCSSPageSize: true, printBackground: true })`, print CSS sets
@@ -87,8 +103,9 @@ The in-app preview renders the same components inside a scaled container.
      (A1 A2 B1). `collate: false` → each template is one unit whose pages repeat in place
      (p1 p1 p2 p2 …).
    - **Scaling / imposition** turns source pages into sheet sides:
-     - `fit` — each source page scaled to A4 minus a 4 mm safe border, natural orientation.
-     - `actual` — 100 %, centred.
+     - `fit` — each source page scaled to A4 minus a 4 mm safe border. The front chooses the
+       sheet orientation; a back with the opposite orientation rotates 90° before fitting.
+     - `actual` — 100 %, centred, with the same 90° rotation for a mixed-orientation back.
      - `2up` — 2 pages per side on a sheet of the opposite orientation (two portrait pages
        side by side on landscape). `4up` — 2×2 grid, same orientation as the source.
        Each page is fitted into its cell, rotated 90° if that gives a larger scale.
@@ -108,9 +125,10 @@ The in-app preview renders the same components inside a scaled container.
 
 ### Combined job — "Print all packs"
 
-One PDF, printed **two-sided, long edge**, so a single print dialog handles everyone:
+One PDF, printed **two-sided, long edge**, so a single print dialog handles everyone.
+"Print all for person" uses this same combined mode for that person’s checked sessions:
 
-- People in Export-table order, enabled only.
+- People in Export-table order, enabled only; within each person, their checked sessions in chronological order.
 - Every pack starts on the **front of a new sheet** (pad to an even number of sides).
 - `single` packs: insert a blank back after **every** side.
 - `duplexShort` packs: rotate back sides 180°.

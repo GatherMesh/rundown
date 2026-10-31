@@ -10,6 +10,7 @@ import {
   planCombinedJob,
   paginate,
   fitPagination,
+  itemGapLabel,
 } from '../app/src/render/domain';
 import type { Item, Category, Person, Template, PackSettings } from '../app/src/types';
 const session = seed.sessions.find((s) => s.id === 'sat-evening')!;
@@ -80,6 +81,53 @@ it('pagination keeps blocks intact and reports impossible fit', () => {
   expect(fitPagination([100, 100, 100], 100, 1).warning).toBeTruthy();
   expect(fitPagination([60, 60], 100, 1).pages).toHaveLength(1);
 });
+it('uses the extra space after a first-page-only header, including fit mode', () => {
+  expect(paginate([60, 60, 60], 100, false, 150)).toEqual([[0], [1, 2]]);
+  expect(paginate([60, 60, 60], 100, true, 150)).toEqual([[0], [1], [2]]);
+  expect(paginate([], 100, false, 150)).toEqual([[]]);
+  expect(fitPagination([60, 60, 60], 100, 2, false, 150)).toEqual({
+    pages: [[0], [1, 2]],
+    scale: 1,
+    warning: null,
+  });
+  const fit = fitPagination([80, 80, 80], 100, 2, false, 150);
+  expect(fit.pages).toEqual([[0], [1, 2]]);
+  expect(fit.scale).toBeCloseTo(150 / 160, 4);
+  expect(fitPagination([100, 100, 100], 100, 1, false, 150).warning).toBeTruthy();
+});
+it.each(['recipient', 'recipientPlusNeighbours'] as const)(
+  'labels omitted middle items for %s without changing assignments or timing',
+  (scope) => {
+    const assigned = items.map((item, index) => ({
+      ...item,
+      personIds: [1, 7].includes(index) ? ['test'] : [],
+    }));
+    const visible = filterItems(
+      assigned,
+      {
+        ...(seed.templates[0] as Template),
+        filter: { scope, categoryIds: null },
+      },
+      'test',
+    );
+    const gaps = visible
+      .map((item, index) => itemGapLabel(visible[index - 1], item))
+      .filter(Boolean);
+    const previous = assigned[scope === 'recipient' ? 1 : 2],
+      next = assigned[scope === 'recipient' ? 7 : 6];
+    expect(gaps).toEqual([
+      `${scope === 'recipient' ? 'Items 3–7' : 'Items 4–6'} omitted · ${formatDuration(next.startSec - previous.endSec)}`,
+    ]);
+    expect(visible.filter((item) => item.isRecipientItem).map((item) => item.number)).toEqual([
+      2, 8,
+    ]);
+    expect(itemGapLabel(undefined, next)).toBe('');
+    expect(itemGapLabel(assigned[0], assigned[1])).toBe('');
+    expect(itemGapLabel(assigned[0], assigned[2])).toBe(
+      `Item 2 omitted · ${formatDuration(assigned[1].durationSec)}`,
+    );
+  },
+);
 const examples = [
   {
     name: 'A',

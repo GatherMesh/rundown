@@ -17,6 +17,7 @@ export const imageSchema = z.strictObject({
 export const packSchema = z
   .strictObject({
     enabled: z.boolean(),
+    sessionIds: uniqueIds.optional(),
     templates: z
       .array(z.strictObject({ templateId: id, copies: z.number().int().min(1).max(20) }))
       .max(20)
@@ -89,6 +90,7 @@ export const recordSchemas = {
       z.strictObject({ kind: z.literal('flow') }),
       z.strictObject({ kind: z.literal('fit'), pages: z.number().int().min(1).max(100) }),
     ]),
+    headerPages: z.enum(['all', 'first']).optional(),
     header: z.strictObject({
       sessionName: headerField,
       eventName: headerField,
@@ -97,7 +99,7 @@ export const recordSchemas = {
       sessionSubtitle: headerField,
       personName: headerField,
     }),
-    itemStyle: z.enum(['table', 'cards', 'cueCard', 'compact']),
+    itemStyle: z.enum(['table', 'cards', 'denseCards', 'cueCard', 'compact']),
     columns: z
       .array(
         z.strictObject({
@@ -252,8 +254,8 @@ add(
 );
 add(
   'exports_render',
-  'Generate a PDF with the shared renderer. Omit personId for all enabled packs. Returns jobId, Storage path and counts; then download the file. May take several minutes.',
-  { ...sessionScope, personId: id.optional() },
+  'Generate a PDF with the shared renderer. Omit personId for all enabled people; omit sessionId for each person’s enabled sessions. Returns jobId, Storage path and counts; then download the file. May take several minutes.',
+  { ...eventScope, sessionId: id.optional(), personId: id.optional() },
   'read',
 );
 add(

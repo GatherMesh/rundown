@@ -74,8 +74,9 @@ Use fractional `order` keys so a drag only writes one document.
   orientation: 'portrait'|'landscape',
   paper: 'A4',
   pageMode: { kind: 'flow' } | { kind: 'fit', pages: number },
+  headerPages?: 'all'|'first', // omitted = all pages
   header: Record<HeaderField, { show: boolean, align: 'left'|'right' }>,
-  itemStyle: 'table'|'cards'|'cueCard'|'compact',
+  itemStyle: 'table'|'cards'|'denseCards'|'cueCard'|'compact',
   columns: { key: ColumnKey, visible: boolean, width: 'auto' | `${number}px` | `${number}fr` }[],
   filter: { scope: 'all'|'recipient'|'recipientPlusNeighbours', categoryIds: string[] | null },
   updatedAt
@@ -88,7 +89,8 @@ audio | video | lighting | camera | slides | imageSlide`.
 ### PackSettings (embedded in Person)
 ```
 {
-  enabled: boolean,
+  enabled: boolean,                         // include person in global Print All
+  sessionIds?: string[],                     // selected event sessions; omitted = all (legacy), [] = none
   templates: { templateId: string, copies: number }[],   // ordered
   sides: 'single'|'duplexLong'|'duplexShort',
   scaling: 'fit'|'actual'|'2up'|'4up',

@@ -7,7 +7,7 @@ service cloud.firestore {
   function edit(t){return member(t) && role(t) in ['owner','editor'];}
   function owner(t){return member(t) && role(t)=='owner';}
   function name(d){return d.name is string && d.name.size()>0 && d.name.size()<=300;}
-  function pack(p){return p.enabled is bool && p.templates is list && p.templates.size()<=20 && p.sides in ['single','duplexLong','duplexShort'] && p.scaling in ['fit','actual','2up','4up'] && p.collate is bool && p.newSheetPerTemplate is bool && p.coverSheet is bool;}
+  function pack(p){return p.enabled is bool && (!('sessionIds' in p) || (p.sessionIds is list && p.sessionIds.size()<=100 && p.sessionIds.toSet().size()==p.sessionIds.size())) && p.templates is list && p.templates.size()<=20 && p.sides in ['single','duplexLong','duplexShort'] && p.scaling in ['fit','actual','2up','4up'] && p.collate is bool && p.newSheetPerTemplate is bool && p.coverSheet is bool;}
   match /users/{uid}{allow read:if signedIn()&&request.auth.uid==uid;allow create,update:if signedIn()&&request.auth.uid==uid && request.resource.data.tenantIds is list && request.resource.data.tenantIds.size()<=100;}
   match /tenants/{t}{
    allow read:if member(t);

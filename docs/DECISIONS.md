@@ -1,5 +1,14 @@
 # Implementation decisions
 
+- Export selection is per person via `pack.sessionIds`; no global session selection. Omitted IDs preserve all-session coverage for legacy packs, while new packs start with `[]`. Editing the checkboxes saves an explicit list, so future sessions require selection. Deleted/moved-away IDs are ignored. The existing person enable switch controls global Print All only. Both global Print All and Print all for person group sessions chronologically and use the combined long-edge duplex assembly, with a fresh sheet for every session pack.
+
+- Templates can show the header on all pages or only the first; existing templates default to all. Later pages reclaim the header space. Every page retains "Page x of y" in its footer, numbered within that template document rather than across copies, cover sheets or the assembled pack.
+
+- A duplex sheet uses the front's orientation; a differently oriented back rotates 90° in both Fit to A4 and Actual size (which retains 100% scale). Pack order determines the front/back sequence; the Export panel lists the actual planned sheets, including blank sides.
+- Filtered reports mark omitted middle runs with item numbers and duration, including category-filter gaps. Separators stay with the next visible item and do not repeat on cue-card continuations. Leading/trailing omissions are left unmarked; recipient and neighbour selection is unchanged.
+
+- Dense Cards is an additional template item style (`denseCards`): a denser single-column version of Cards, using the same fields and shared renderer, with inline labels and 12 px body text. It retains whole-card pagination and the existing oversized-card continuation notice.
+
 - The Organisation page lets owners upload or replace the tenant logo (PNG/JPG, up to 10 MB), matching existing tenant-document permissions. Other members can view it. It saves immediately and uses the existing template/logo rendering; event logos retain priority. Replaced files are retained, consistent with the existing asset API.
 
 - Sessions and templates have explicit Delete confirmation dialogs. Session deletion removes its item documents; up to 499 items plus the session are deleted atomically in the client, with a callable function for larger sessions. Uploaded image files are retained because duplicated sessions/items can share their paths.

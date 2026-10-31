@@ -380,6 +380,66 @@ it('renders PDFs through both API and existing callable exports, preserving comp
   expect((await invoke(jobId)).ok).toBe(false);
   expect((await request('exports_get', { tenantId, jobId })).status).toBe('complete');
 }, 120_000);
+it('exports each person’s selected sessions individually, together, and globally', async () => {
+  const { id, ...data } = seed.templates[0];
+  const template = await request('templates_create', { tenantId, data });
+  await request('items_create', {
+    ...scope(),
+    data: { title: 'Selected session cue', durationSec: 60, categoryId: 'category' },
+  });
+  const second = await request('sessions_duplicate', { tenantId, eventId: 'event', id: 'session' });
+  await request('sessions_update', {
+    tenantId,
+    eventId: 'event',
+    id: second.id,
+    data: { name: 'Second session', startAt: '2027-03-28T19:00:00+10:00' },
+  });
+  const settings = {
+    ...pack,
+    enabled: true,
+    templates: [{ templateId: template.id, copies: 1 }],
+    sessionIds: ['session', second.id],
+  };
+  await request('packs_set', { tenantId, eventId: 'event', personId: 'person', pack: settings });
+  const other = await request('people_create', {
+    tenantId,
+    eventId: 'event',
+    data: { name: 'Other person', pack: { ...settings, sessionIds: [second.id] } },
+  });
+  await request('people_create', {
+    tenantId,
+    eventId: 'event',
+    data: { name: 'Disabled person', pack: { ...settings, enabled: false } },
+  });
+  const individual = await request('exports_render', { ...scope(), personId: 'person' }, 'viewer');
+  expect(individual).toMatchObject({ sourcePages: 1, sheets: 1, pages: 1 });
+  const person = await request(
+    'exports_render',
+    { tenantId, eventId: 'event', personId: 'person' },
+    'viewer',
+  );
+  expect(person).toMatchObject({ sourcePages: 2, sheets: 2, pages: 4 });
+  const all = await request('exports_render', { tenantId, eventId: 'event' }, 'viewer');
+  expect(all).toMatchObject({ sourcePages: 3, sheets: 3, pages: 6 });
+  const [bytes] = await getStorage(app).bucket().file(all.path).download();
+  expect((await PDFDocument.load(bytes)).getPageCount()).toBe(6);
+  await request('exports_render', { ...scope(), personId: other.id }, 'viewer', 409);
+  await request('packs_set', {
+    tenantId,
+    eventId: 'event',
+    personId: 'person',
+    pack: { ...settings, sessionIds: [] },
+  });
+  await request(
+    'exports_render',
+    { tenantId, eventId: 'event', personId: 'person' },
+    'viewer',
+    409,
+  );
+  const remaining = await request('exports_render', { tenantId, eventId: 'event' }, 'viewer');
+  expect(remaining).toMatchObject({ sourcePages: 1, sheets: 1, pages: 2 });
+}, 120_000);
+
 it('connects the built stdio MCP server to the real API', async () => {
   const transport = new StdioClientTransport({
     command: process.execPath,

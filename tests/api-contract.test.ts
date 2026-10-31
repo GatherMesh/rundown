@@ -3,6 +3,27 @@ import { operations, openApiDocument } from '../functions/src/api-contract';
 import { checkRole, validateImagePath } from '../functions/src/api-service';
 import { assetTarget, decodeImage } from '../functions/src/api-http';
 import seed from '../reference/seed.json';
+import { defaultPack } from '../app/src/types';
+
+it('accepts per-person session selection and optional export session scope', () => {
+  const args = { tenantId: 't', eventId: 'e', personId: 'p' };
+  for (const sessionIds of [undefined, [], ['s1', 's2']])
+    expect(
+      operations.packs_set.schema.safeParse({
+        ...args,
+        pack: { ...defaultPack(), sessionIds },
+      }).success,
+    ).toBe(true);
+  for (const sessionIds of [['s', 's'], ['../other'], 's', null])
+    expect(
+      operations.packs_set.schema.safeParse({
+        ...args,
+        pack: { ...defaultPack(), sessionIds },
+      }).success,
+    ).toBe(false);
+  for (const scope of [args, { ...args, sessionId: 's' }, { tenantId: 't', eventId: 'e' }])
+    expect(operations.exports_render.schema.safeParse(scope).success).toBe(true);
+});
 const item = {
   tenantId: 'a',
   eventId: 'e',
@@ -37,6 +58,38 @@ it('accepts every seed template and rejects duplicate columns / injected styles'
       data: { ...data, columns: [{ ...data.columns[0], width: '1fr; color:red' }] },
     }).success,
   ).toBe(false);
+});
+it('accepts Dense Cards when creating and updating templates', () => {
+  const { id, ...data } = seed.templates[0];
+  expect(
+    operations.templates_create.schema.safeParse({
+      tenantId: 'a',
+      data: { ...data, itemStyle: 'denseCards' },
+    }).success,
+  ).toBe(true);
+  expect(
+    operations.templates_update.schema.safeParse({
+      tenantId: 'a',
+      id,
+      data: { itemStyle: 'denseCards' },
+    }).success,
+  ).toBe(true);
+});
+it.each(['all', 'first', 'invalid'])('validates header pages setting %s', (headerPages) => {
+  const { id, ...data } = seed.templates[0];
+  expect(
+    operations.templates_create.schema.safeParse({
+      tenantId: 'a',
+      data: { ...data, headerPages },
+    }).success,
+  ).toBe(headerPages !== 'invalid');
+  expect(
+    operations.templates_update.schema.safeParse({
+      tenantId: 'a',
+      id,
+      data: { headerPages },
+    }).success,
+  ).toBe(headerPages !== 'invalid');
 });
 it.each([-1, 1.5, 86401, '60', null])('rejects invalid duration %s', (durationSec) => {
   expect(

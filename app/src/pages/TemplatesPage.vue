@@ -26,6 +26,7 @@ const preview = computed(() =>
 const styles: { value: ItemStyle; label: string; icon: string }[] = [
   { value: 'table', label: 'Table rows', icon: 'table_rows' },
   { value: 'cards', label: 'Cards', icon: 'view_agenda' },
+  { value: 'denseCards', label: 'Dense Cards', icon: 'view_day' },
   { value: 'cueCard', label: 'Cue card', icon: 'article' },
   { value: 'compact', label: 'Compact list', icon: 'format_list_bulleted' },
 ];
@@ -268,7 +269,19 @@ function removeTemplate() {
         <section class="card">
           <div class="section-heading">
             <h2>Header</h2>
-            <small class="muted">Repeats on every page</small>
+            <q-select
+              :model-value="template.headerPages ?? 'all'"
+              label="Show header on"
+              outlined
+              dense
+              emit-value
+              map-options
+              :options="[
+                { label: 'All pages', value: 'all' },
+                { label: 'First page only', value: 'first' },
+              ]"
+              @update:model-value="(v) => patch({ headerPages: v })"
+            />
           </div>
           <div class="header-options">
             <div v-for="(label, key) in headers" :key="key" class="header-option">
@@ -297,6 +310,7 @@ function removeTemplate() {
               :key="s.value"
               class="style-option"
               :class="{ selected: template.itemStyle === s.value }"
+              :aria-pressed="template.itemStyle === s.value"
               @click="patch({ itemStyle: s.value })"
             >
               <q-icon :name="s.icon" size="40px" /><strong>{{ s.label }}</strong>
@@ -416,3 +430,9 @@ function removeTemplate() {
     </aside>
   </div>
 </template>
+
+<style scoped>
+.style-options {
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+</style>

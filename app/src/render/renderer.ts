@@ -1,5 +1,5 @@
 import type { ComputedItem, Template, Person, ColumnKey } from '../types';
-import { filterItems, fitPagination, formatDuration, time } from './domain';
+import { filterItems, fitPagination, formatDuration, itemGapLabel, time } from './domain';
 export interface RenderPayload {
   tenant: { name: string; logoUrl?: string };
   event: { name: string; timeZone: string; logoUrl?: string };
@@ -133,7 +133,7 @@ function block(p: RenderPayload, item: ComputedItem, continuation = false) {
     const before = !previous?.personIds.includes(p.recipient?.id ?? '');
     return `<div class="print-context"><span class="mono">${time(p.session.startAt, item.startSec, p.event.timeZone)}</span><small>${before ? 'Before' : 'After'}</small><b>${escape(item.title)}</b><span>${escape(item.people.map((p) => p.name).join(', '))} · ${formatDuration(item.durationSec)}</span></div>`;
   }
-  if (style === 'cards') {
+  if (style === 'cards' || style === 'denseCards') {
     const visible = (key: ColumnKey) => cols.some((c) => c.key === key);
     const meta = [
       visible('category') ? escape(item.category.name) : '',
@@ -157,7 +157,7 @@ function block(p: RenderPayload, item: ComputedItem, continuation = false) {
           : '';
       })
       .join('');
-    return `<article class="print-item print-card${recipientClass}"><div class="print-card-heading"><div><small class="print-card-meta">${meta}</small>${visible('title') ? `<h2>${escape(item.title)}</h2>` : ''}</div><div class="print-card-timing">${timing}</div></div>${rest}</article>`;
+    return `<article class="print-item print-card${style === 'denseCards' ? ' print-dense-card' : ''}${recipientClass}"><div class="print-card-heading"><div><small class="print-card-meta">${meta}</small>${visible('title') ? `<h2>${escape(item.title)}</h2>` : ''}</div><div class="print-card-timing">${timing}</div></div>${rest}</article>`;
   }
   if (style === 'table')
     return `<div class="print-table-row${recipientClass}" style="grid-template-columns:${grid(p)}">${cols.map((c) => `<div class="print-cell ${['start', 'duration', 'end'].includes(c.key) ? 'mono' : ''}">${c.key === 'title' ? `<b>${cell(p, item, c.key)}</b>${p.template.columns.some((c) => c.key === 'category' && c.visible) ? `<small class="print-category">${escape(item.category.name)}</small>` : ''}` : cell(p, item, c.key)}</div>`).join('')}</div>`;
@@ -214,13 +214,22 @@ export async function renderDocument(p: RenderPayload): Promise<RenderResult> {
     const tableHeight =
       measure.querySelector('.print-table-head')?.getBoundingClientRect().height ?? 0;
     const available = height - 88 - headerHeight - 16 - 36 - tableHeight;
+    const subsequentAvailable =
+      p.template.headerPages === 'first' ? available + headerHeight + 16 : available;
+    const pageCapacity = (index: number) => (index === 0 ? available : subsequentAvailable);
     const body = measure.querySelector<HTMLElement>('.measure-blocks')!;
     const visible = filterItems(p.items, p.template, p.recipient?.id ?? null);
     const htmls: string[] = [];
     // Cue scripts are the only blocks that flow; split at measured word boundaries.
-    for (const item of visible) {
+    for (const [index, item] of visible.entries()) {
+      const gap = itemGapLabel(visible[index - 1], item);
+      // Keep the omission marker with the following item, including across page breaks.
+      const withGap = (html: string) =>
+        gap
+          ? `<div class="print-item-group"><div class="print-gap">${gap}</div>${html}</div>`
+          : html;
       if (p.template.itemStyle !== 'cueCard' || !item.script || !colsHasScript(p)) {
-        htmls.push(block(p, item));
+        htmls.push(withGap(block(p, item)));
         continue;
       }
       const words = item.script.split(/\s+/);
@@ -232,18 +241,24 @@ export async function renderDocument(p: RenderPayload): Promise<RenderResult> {
           best = 1;
         while (low <= high) {
           const mid = Math.floor((low + high) / 2);
-          body.innerHTML = block(
+          const html = block(
             p,
             { ...item, script: remaining.slice(0, mid).join(' ') },
             continuation,
           );
+          body.innerHTML = continuation ? html : withGap(html);
           await readyImages(body);
-          if (body.getBoundingClientRect().height <= available) {
+          if (body.getBoundingClientRect().height + 12 <= pageCapacity(htmls.length)) {
             best = mid;
             low = mid + 1;
           } else high = mid - 1;
         }
-        htmls.push(block(p, { ...item, script: remaining.slice(0, best).join(' ') }, continuation));
+        const html = block(
+          p,
+          { ...item, script: remaining.slice(0, best).join(' ') },
+          continuation,
+        );
+        htmls.push(continuation ? html : withGap(html));
         remaining = remaining.slice(best);
         continuation = true;
       }
@@ -254,26 +269,26 @@ export async function renderDocument(p: RenderPayload): Promise<RenderResult> {
       (el) =>
         Math.ceil(el.getBoundingClientRect().height) + (p.template.itemStyle === 'table' ? 0 : 12),
     );
-    // Overheight non-cue blocks are clipped visibly, without consuming phantom extra pages.
-    const clipped = heights.map((h, i) => {
-      if (h > available) {
-        htmls[i] =
-          `<div class="print-clipped" style="height:${available - 12}px">${htmls[i]}<span class="clip-notice">⋯ continues in app</span></div>`;
-        return available;
-      }
-      return h;
-    });
     const result = fitPagination(
-      clipped,
+      heights.map((h) => Math.min(h, subsequentAvailable)),
       available,
       p.template.pageMode.kind === 'fit' ? p.template.pageMode.pages : undefined,
       p.template.itemStyle === 'cueCard',
+      subsequentAvailable,
     );
+    // Clip against the actual page's capacity, reclaiming header space on later pages.
+    result.pages.forEach((indices, index) => {
+      const capacity = Math.min(subsequentAvailable, pageCapacity(index) / result.scale);
+      indices.forEach((i) => {
+        if (heights[i] > capacity)
+          htmls[i] = `<div class="print-clipped" style="height:${capacity - 12}px">${htmls[i]}<span class="clip-notice">⋯ continues in app</span></div>`;
+      });
+    });
     const runtime = p.items.at(-1)?.endSec ?? 0;
     const html = result.pages
       .map(
         (indices, index) =>
-          `<section class="print-page ${p.template.orientation}" style="width:${width}px;height:${height}px">${head}<div class="print-body" style="height:${available + tableHeight}px">${th}<div class="print-scaled-body" style="transform:scale(${result.scale});transform-origin:top left;width:100%">${indices.length ? indices.map((i) => htmls[i]).join('') : '<p class="print-empty">No items match this template.</p>'}</div></div><footer class="print-footer"><span>${escape(p.template.name)}</span><span>Runtime ${formatDuration(runtime)} · ends ${time(p.session.startAt, runtime, p.event.timeZone, true)}</span><span>Page ${index + 1} of ${result.pages.length}</span></footer></section>`,
+          `<section class="print-page ${p.template.orientation}" style="width:${width}px;height:${height}px">${index === 0 || p.template.headerPages !== 'first' ? head : ''}<div class="print-body" style="height:${pageCapacity(index) + tableHeight}px">${th}<div class="print-scaled-body" style="transform:scale(${result.scale});transform-origin:top left;width:100%">${indices.length ? indices.map((i) => htmls[i]).join('') : '<p class="print-empty">No items match this template.</p>'}</div></div><footer class="print-footer"><span>${escape(p.template.name)}</span><span>Runtime ${formatDuration(runtime)} · ends ${time(p.session.startAt, runtime, p.event.timeZone, true)}</span><span>Page ${index + 1} of ${result.pages.length}</span></footer></section>`,
       )
       .join('');
     return { html, pageCount: result.pages.length, warning: result.warning };

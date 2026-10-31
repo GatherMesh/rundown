@@ -107,13 +107,16 @@ export async function assemblePacks(packs: PackDocument[], combined: boolean): P
                 ? 1
                 : Math.min(availableWidth / source.width, availableHeight / source.height),
             rotate = false;
-          if (nup > 1) {
+          // Both sides share the front's paper size; turn a mismatched back to fit it.
+          if (nup > 1 || (duplex && index % 2)) {
             const alternative = Math.min(
               availableWidth / source.height,
               availableHeight / source.width,
             );
-            if (alternative > scale) {
-              scale = alternative;
+            if (
+              alternative > Math.min(availableWidth / source.width, availableHeight / source.height)
+            ) {
+              if (pack.person.pack.scaling !== 'actual') scale = alternative;
               rotate = true;
             }
           }

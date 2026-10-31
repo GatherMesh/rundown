@@ -10,7 +10,7 @@ Firebase project: `gathermesh-rundown`, Sydney (`australia-southeast1`).
 - Multiple organisations and events, event-scoped people, tenant-wide categories and templates.
 - Realtime sessions with autosave, offline persistence, computed timing, drag reorder, quick-add, duplication, item deletion with undo, AV fields and slide uploads.
 - A4 portrait/landscape templates with configurable headers, fields, widths, filters and four item styles; live recipient previews use the same measured renderer as server PDFs.
-- Person-specific packs with ordered templates, copies, collating, covers, duplex settings, 2-up/4-up imposition, download and browser printing.
+- Person-specific session selections and packs with ordered templates, copies, collating, covers, duplex settings, 2-up/4-up imposition, download and browser printing.
 - Tenant membership rules with owner/editor/viewer permissions, image-upload restrictions and authenticated callable exports.
 
 ## Local development
@@ -75,7 +75,7 @@ The production app starts with no organisation data. Sign in, create your organi
 
 ## Print behavior
 
-Single-person PDFs set the selected duplex viewer preference. Combined jobs always use two-sided, long-edge printing; single-sided recipients receive blank backs, and short-edge backs rotate 180°. Browser/printer settings can override PDF preferences, so the app displays the required setting before printing.
+Individual session PDFs set the selected duplex viewer preference. Print all for person includes that person’s checked sessions; global Print All includes every enabled person’s checked sessions. Combined jobs always use two-sided, long-edge printing; single-sided recipients receive blank backs, and short-edge backs rotate 180°. Browser/printer settings can override PDF preferences, so the app displays the required setting before printing.
 
 Margaret's sample pack has 3 content pages and 3 sheets (6 PDF sides, including blanks). All enabled sample packs have 17 content pages and 15 sheets. The handwritten example pack-planning tests are separate from these actual rendered counts.
 
@@ -83,7 +83,7 @@ Sample slide references have no supplied image files. They print as filename pla
 
 ## Limits
 
-A PDF request accepts up to 100 recipients / 500 session items and 1,000 sides per pack. Copies are limited to 20 per template. A session move is one atomic batch and refuses moves that would exceed 450 writes. Non-cue blocks taller than a page display a visible clipping notice; cue scripts continue over pages. Print jobs and cached PDFs remain in tenant Storage until removed by the project owner.
+A PDF request accepts up to 100 recipients / 100 sessions / 500 items per session and 1,000 sides per pack. Copies are limited to 20 per template. A session move is one atomic batch and refuses moves that would exceed 450 writes. Non-cue blocks taller than a page display a visible clipping notice; cue scripts continue over pages. Print jobs and cached PDFs remain in tenant Storage until removed by the project owner.
 
 ## API and MCP
 

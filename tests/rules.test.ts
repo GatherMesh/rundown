@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getBytes } from 'firebase/storage';
 import { readFileSync } from 'node:fs';
+import { defaultPack } from '../app/src/types';
 let env: RulesTestEnvironment;
 beforeAll(async () => {
   env = await initializeTestEnvironment({
@@ -61,6 +62,27 @@ it('permits viewer reads but no edits', async () => {
   const db = env.authenticatedContext('viewer').firestore();
   await assertSucceeds(getDoc(doc(db, 'tenants/a/events/event')));
   await assertFails(updateDoc(doc(db, 'tenants/a/events/event'), { name: 'Changed' }));
+});
+it('allows editors to save session selection, rejects malformed lists and viewer changes', async () => {
+  const path = 'tenants/a/events/event/people/person';
+  const person = doc(env.authenticatedContext('editor').firestore(), path);
+  await assertSucceeds(setDoc(person, { name: 'Person', pack: defaultPack() }));
+  await assertSucceeds(updateDoc(person, { 'pack.sessionIds': ['morning', 'evening'] }));
+  await assertSucceeds(updateDoc(person, { 'pack.sessionIds': [] }));
+  for (const sessionIds of [
+    'morning',
+    null,
+    ['morning', 'morning'],
+    Array.from({ length: 101 }, (_, i) => `s${i}`),
+  ])
+    await assertFails(updateDoc(person, { 'pack.sessionIds': sessionIds }));
+  await assertFails(
+    updateDoc(doc(env.authenticatedContext('viewer').firestore(), path), {
+      'pack.sessionIds': ['morning'],
+    }),
+  );
+  const { sessionIds, ...legacy } = defaultPack();
+  await assertSucceeds(updateDoc(person, { pack: legacy }));
 });
 it('allows editor data changes but prevents escalation and export-job forgery', async () => {
   const db = env.authenticatedContext('editor').firestore();

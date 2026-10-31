@@ -81,36 +81,46 @@ Autosave on blur / 600 ms debounce. Realtime: other editors' changes appear live
 2. **Centre**: editor for the selected template.
    - **Page**: Orientation (Portrait / Landscape segmented), Paper (A4, locked), Page count
      (*Flow onto as many pages as needed* | *Fit to N pages*).
-   - **Header**: six toggles, each with a position (Left/Right): Session name, Event name,
+   - **Header**: Show header on All pages (default) or First page only. Six toggles, each with a position (Left/Right): Session name, Event name,
      Session date & time, Logo, Session subtitle, **Person name** (filled per recipient at export).
-   - **Item style**: Table rows | Cards | Cue card (one item per block, large script) | Compact list.
+     Every rendered page has a footer numbered "Page x of y" within that template document.
+   - **Item style**: Table rows | Cards | Dense Cards | Cue card (one item per block, large script) | Compact list.
    - **Columns** (ordered, drag to reorder, each with a visible checkbox and width):
      Start, Duration, End, #, Title, Category, People, Notes, Script, Audio, Video, Lighting,
      Camera, Slides, Image slide. Width is `auto`, a px value, or `1fr`-style flex. In non-table
      styles, "columns" = which fields show and in what order.
    - **Which items**: All items · Only the recipient's items · Recipient's items + one either side
      (neighbours render dimmed as context, as in `PackSpeaker.png`). Plus a category filter.
+     Gaps between visible items show the omitted item numbers and duration.
    - Header shows "Used in N session packs". Buttons: Duplicate, Save template.
 3. **Right**: live A4 preview (scaled), "Preview as <person>" select, "Page x of y · A4 landscape".
    Preview uses the current session (last one opened) and the shared renderer.
 
 ### 4.3 Export page — `design/screens/Export.png`
 
-- Header: "Session packs", session select, summary "6 of 8 people · 17 sheets",
-  **Download all (PDF)**, **Print all packs** (primary).
+- Header: "Session packs", event name, summary of enabled people and total sheets across their
+  selected sessions, **Download all (PDF)** and global **Print All**.
 - People table (every person in the event): enable switch · avatar/name/role · templates with
-  copy counts · Sides · Scaling · Sheets (computed) · Print (just this person).
-  Disabled rows dim. Click a row to edit in the side panel.
+  copy counts · selected session count · Scaling · total Sheets (computed) · Print all for person.
+  The enable switch controls inclusion in global Print All; individual print actions remain available.
+  Click a row to edit that person's pack in the side panel.
 - **Side panel — pack settings for the selected person**
-  - Templates in this pack: ordered list (drag), each with orientation icon, page count for this
-    session, copies stepper (−/×n/+). "+ Add template".
+  - Sessions: checkbox per event session, with its name, event-local date/time and computed sheets.
+    Preview and Print on each checked session produce just that person's sheets for that session.
+    **Print all for person** produces every checked session in chronological order in one PDF.
+  - Templates in this pack: ordered list (drag), copies stepper (−/×n/+). "+ Add template".
+    The same templates and print settings apply to each checked session.
   - Sides: Single | Double · long edge | Double · short edge.
   - Scaling: Fit to A4 | Actual size | 2 per sheet | 4 per sheet.
   - Options: Collate copies · Start each template on a new sheet · Add a cover sheet with name.
-  - Summary: pages, sheets. Buttons: Preview PDF, Print pack.
+  - Summary: total pages and sheets for the person's checked sessions. Preview all (PDF).
+  - Sheet layout: a local session selector shows each sheet's front and back, identifying template,
+    page, copy and blank sides. It changes only this layout preview, never the export selection.
+    Mixed portrait/landscape backs rotate 90° automatically in Fit to A4 and Actual size.
 
-Pack settings are stored **per event person** and apply to every session of that event
-(decision — §9). The Export page always operates on one selected session.
+Pack settings and selected session IDs are stored **per event person**. Global Print All groups
+packs by person, then chronological session, with every session pack starting on a new sheet.
+Existing packs without session IDs include all sessions; new packs start with none selected.
 
 ### 4.4 People page (not designed — follow the same visual system)
 

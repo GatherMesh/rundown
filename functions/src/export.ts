@@ -9,6 +9,8 @@ import puppeteer, { type Browser } from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { PDFDocument } from 'pdf-lib';
 import { computeItems, planPack } from '../../app/src/render/domain';
+import { selectPackJobs } from '../../app/src/render/pack-selection';
+import { packSchema } from './api-contract';
 import type { Category, Item, Person, Template, StoredImage } from '../../app/src/types';
 import type { RenderPayload } from '../../app/src/render/renderer';
 import { assemblePacks, type PackDocument } from './assemble';
@@ -23,11 +25,11 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
   const data = input,
     tenantId = id(data.tenantId, 'organisation'),
     eventId = id(data.eventId, 'event'),
-    sessionId = id(data.sessionId, 'session'),
+    sessionId = data.sessionId === undefined ? undefined : id(data.sessionId, 'session'),
+    personId = all ? undefined : id(data.personId, 'person'),
     jobId = id(data.jobId, 'job');
   const root = db.doc(`tenants/${tenantId}`),
-    eventRef = root.collection('events').doc(eventId),
-    sessionRef = eventRef.collection('sessions').doc(sessionId);
+    eventRef = root.collection('events').doc(eventId);
   const membership = await root.collection('members').doc(uid).get();
   if (!['owner', 'editor', 'viewer'].includes(membership.data()?.role))
     throw new HttpsError('permission-denied', 'You are not a member of this organisation.');
@@ -37,58 +39,59 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
   try {
     await job.create({
       status: 'running',
-      message: 'Loading session…',
+      message: 'Loading session packs…',
       createdAt: new Date(),
       createdBy: uid,
     });
     jobCreated = true;
-    const [tenantDoc, eventDoc, sessionDoc, itemDocs, categoryDocs, templateDocs, peopleDocs] =
+    const [tenantDoc, eventDoc, sessionDocs, categoryDocs, templateDocs, peopleDocs] =
       await Promise.all([
         root.get(),
         eventRef.get(),
-        sessionRef.get(),
-        sessionRef.collection('items').orderBy('order').get(),
+        eventRef.collection('sessions').orderBy('sortKey').get(),
         root.collection('categories').get(),
         root.collection('templates').get(),
         eventRef.collection('people').get(),
       ]);
-    if (!tenantDoc.exists || !eventDoc.exists || !sessionDoc.exists)
-      throw new HttpsError('not-found', 'The event or session no longer exists.');
+    if (!tenantDoc.exists || !eventDoc.exists)
+      throw new HttpsError('not-found', 'The event no longer exists.');
+    if (sessionId && !sessionDocs.docs.some((s) => s.id === sessionId))
+      throw new HttpsError('not-found', 'The session no longer exists.');
     const tenant = tenantDoc.data()!,
-      event = eventDoc.data()!,
-      session = sessionDoc.data()!;
+      event = eventDoc.data()!;
     const people = peopleDocs.docs.map((d) => ({ id: d.id, ...d.data() }) as Person),
       templates = templateDocs.docs.map((d) => ({ id: d.id, ...d.data() }) as Template);
-    const recipients = all
-      ? people.filter((p) => p.pack.enabled)
-      : people.filter((p) => p.id === id(data.personId, 'person'));
-    if (!recipients.length)
-      throw new HttpsError('failed-precondition', 'Enable at least one person’s pack.');
-    if (recipients.length > 100 || itemDocs.size > 500)
+    if (personId && !people.some((p) => p.id === personId))
+      throw new HttpsError('not-found', 'The person no longer exists.');
+    const candidates = people.filter((p) => (personId ? p.id === personId : p.pack.enabled));
+    for (const p of candidates)
+      if (!packSchema.shape.sessionIds.safeParse(p.pack.sessionIds).success)
+        throw new HttpsError('failed-precondition', `Check the pack settings for ${p.name}.`);
+    const jobs = selectPackJobs(candidates, sessionDocs.docs, personId, sessionId);
+    if (!jobs.length)
+      throw new HttpsError(
+        'failed-precondition',
+        'Enable at least one session for a person’s pack.',
+      );
+    const recipients = [...new Set(jobs.map((j) => j.person))];
+    if (recipients.length > 100 || new Set(jobs.map((j) => j.session.id)).size > 100)
       throw new HttpsError(
         'resource-exhausted',
-        'Export up to 100 recipients and 500 items at a time.',
+        'Export up to 100 people and 100 sessions at a time.',
       );
     for (const p of recipients) {
-      if (!p.pack.templates.length || p.pack.templates.length > 20)
-        throw new HttpsError('failed-precondition', `Choose 1–20 templates for ${p.name}.`);
+      if (!packSchema.safeParse(p.pack).success || !p.pack.templates.length)
+        throw new HttpsError(
+          'failed-precondition',
+          `Check the templates and pack settings for ${p.name}.`,
+        );
       for (const ref of p.pack.templates)
-        if (
-          !Number.isInteger(ref.copies) ||
-          ref.copies < 1 ||
-          ref.copies > 20 ||
-          !templates.some((t) => t.id === ref.templateId)
-        )
+        if (!templates.some((t) => t.id === ref.templateId))
           throw new HttpsError(
             'failed-precondition',
             `Check the templates and copy counts for ${p.name}.`,
           );
     }
-    const items = computeItems(
-      itemDocs.docs.map((d) => ({ id: d.id, ...d.data() }) as Item),
-      categoryDocs.docs.map((d) => ({ id: d.id, ...d.data() }) as Category),
-      people,
-    );
     const imageCache = new Map<string, Promise<string | undefined>>();
     const resolveImage = (image?: StoredImage): Promise<string | undefined> => {
       if (!image?.path || image.path.startsWith('seed/')) return Promise.resolve(undefined);
@@ -116,21 +119,36 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
         );
       return imageCache.get(image.path)!;
     };
-    for (const item of items)
-      if (item.imageSlide)
-        item.imageSlide = { ...item.imageSlide, url: await resolveImage(item.imageSlide) };
+    const sessionItems = new Map<string, ReturnType<typeof computeItems>>();
+    for (const { session } of jobs) {
+      if (sessionItems.has(session.id)) continue;
+      const itemDocs = await session.ref.collection('items').orderBy('order').limit(501).get();
+      if (itemDocs.size > 500)
+        throw new HttpsError('resource-exhausted', 'Export up to 500 items per session.');
+      const items = computeItems(
+        itemDocs.docs.map((d) => ({ id: d.id, ...d.data() }) as Item),
+        categoryDocs.docs.map((d) => ({ id: d.id, ...d.data() }) as Category),
+        people,
+      );
+      for (const item of items)
+        if (item.imageSlide)
+          item.imageSlide = { ...item.imageSlide, url: await resolveImage(item.imageSlide) };
+      sessionItems.set(session.id, items);
+    }
     const [tenantLogo, eventLogo] = await Promise.all([
       resolveImage(tenant.logo),
       resolveImage(event.logo),
     ]);
     const printPath = join(__dirname, '../print/src/render/print.html'),
       printHtml = await readFile(printPath, 'utf8');
-    const docsTotal = recipients.reduce((n, p) => n + p.pack.templates.length, 0);
+    const docsTotal = jobs.reduce((n, j) => n + j.person.pack.templates.length, 0);
     let rendered = 0;
     const packs: PackDocument[] = [],
       warnings = new Set<string>();
     const memoryCache = new Map<string, { bytes: Uint8Array; count: number }>();
-    for (const person of recipients) {
+    for (const { person, session: sessionDoc } of jobs) {
+      const session = sessionDoc.data(),
+        items = sessionItems.get(sessionDoc.id)!;
       const documents = new Map<string, Uint8Array>(),
         counts: Record<string, number> = {};
       for (const ref of person.pack.templates) {
@@ -235,8 +253,9 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
       });
     }
     await job.update({ message: 'Assembling print-ready packs…' });
-    const bytes = await assemblePacks(packs, all),
-      path = `tenants/${tenantId}/exports/${sessionId}/${all ? 'all' : recipients[0].id}-${jobId}.pdf`;
+    const combined = all || !sessionId;
+    const bytes = await assemblePacks(packs, combined),
+      path = `tenants/${tenantId}/exports/${sessionId ?? 'event'}/${all ? 'all' : recipients[0].id}-${jobId}.pdf`;
     await bucket()
       .file(path)
       .save(Buffer.from(bytes), {
