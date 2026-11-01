@@ -11,6 +11,7 @@ import fontkit from '@pdf-lib/fontkit';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { PackSettings, PlannedPack, Person, Template } from '../../app/src/types';
+import { printDate } from '../../app/src/render/reprints';
 export interface PackDocument {
   person: Person;
   plan: PlannedPack;
@@ -19,9 +20,14 @@ export interface PackDocument {
   sessionName: string;
   eventName: string;
   dateTime: string;
+  timeZone?: string;
 }
 const A4: [number, number] = [595.276, 841.89];
-export async function assemblePacks(packs: PackDocument[], combined: boolean): Promise<Uint8Array> {
+export async function assemblePacks(
+  packs: PackDocument[],
+  combined: boolean,
+  printedAt = new Date().toISOString(),
+): Promise<Uint8Array> {
   const output = await PDFDocument.create();
   output.registerFontkit(fontkit);
   let font: PDFFont;
@@ -106,7 +112,9 @@ export async function assemblePacks(packs: PackDocument[], combined: boolean): P
           const cols = nup === 1 ? 1 : 2,
             rows = nup === 4 ? 2 : 1,
             cellWidth = width / cols,
-            cellHeight = height / rows;
+            // Keep the physical sheet's timestamp readable, including on n-up sheets.
+            footerHeight = nup > 1 ? 18 : 0,
+            cellHeight = (height - footerHeight) / rows;
           const border = pack.person.pack.scaling === 'actual' ? 0 : 11.34;
           const availableWidth = cellWidth - 2 * border,
             availableHeight = cellHeight - 2 * border;
@@ -154,6 +162,16 @@ export async function assemblePacks(packs: PackDocument[], combined: boolean): P
             },
           );
         }
+      if (side.kind !== 'blank') {
+        const stamp = `Printed ${printDate(printedAt, pack.timeZone ?? 'Australia/Brisbane')}`;
+        page.drawText(stamp, {
+          x: width - 15 - font.widthOfTextAtSize(stamp, 7),
+          y: 12,
+          size: 7,
+          font,
+          color: rgb(0.35, 0.38, 0.44),
+        });
+      }
       if (combined && pack.person.pack.sides === 'duplexShort' && index % 2)
         page.setRotation(degrees(180));
       if (combined && pack.person.pack.sides === 'single') output.addPage(size);

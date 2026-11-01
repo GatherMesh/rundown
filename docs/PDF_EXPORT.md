@@ -56,6 +56,10 @@ each template document, restarting for each template/copy (not across the assemb
 - **Header**: fields per `template.header`; left group = logo + session name (h1) + event/template name
   line; right group = "Prepared for" + person name + date & time. Hidden fields collapse. Centre logo placement uses a middle column between equal-width left/right text groups.
 - **Footer**: `{template name} · copy x of n` · `Runtime h:mm:ss · ends h:mm am` · `Page x of y`.
+  Final PDF assembly also stamps `Printed {date, time including seconds, event timezone}` at
+  the bottom of every content side and cover, at physical sheet size (including n-up output).
+  One timestamp applies to the entire generated job; cached source documents remain undated.
+  Blank padding backs remain blank.
 - **Item styles**
   - Each template column can override its text colour (`color`, six-digit hex), including labels
     and values in every layout. Omitted colours retain the layout defaults. Category text beneath

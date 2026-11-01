@@ -1,5 +1,22 @@
 # Implementation decisions
 
+- Each newly generated PDF gets one print timestamp (date, time with seconds and the event's
+  timezone), stamped during final sheet assembly so cached template PDFs never reuse an old
+  date. Stamp every content side and cover; padding backs stay blank. N-up layouts reserve a
+  small footer band so the timestamp remains readable at physical sheet size.
+- Export tracks the last confirmed printed snapshot per event/person/session in server-only
+  `printRecords`. After a successful print the operator chooses **Mark as printed**; previews,
+  downloads and cancelled dialogs do not advance the baseline. Existing paper copies cannot be
+  inferred, so tracking starts with the first confirmed print. Changes to a selected template,
+  print settings, session header/runtime or a recipient's filtered items require a full session
+  reprint, including every configured template and copy. Item comparisons conservatively include
+  all fields on included items, even hidden fields. Edit metadata and image download URLs are
+  ignored. Global enable switches and cover/selected-session changes do not dirty session pages.
+  Reprints include previously printed people even if excluded from Print All, but only their
+  currently selected sessions, and omit person-wide covers. Confirm the snapshot actually
+  generated, retaining any newer edits as outstanding; an older job cannot replace a newer print
+  record. Print jobs are limited to 450 person/session combinations for atomic confirmation.
+
 - Template name replaces Session subtitle in the print header and uses the template's existing
   editable name. Keep the persisted `header.sessionSubtitle` key so saved visibility/alignment
   settings and API clients continue to work without a data migration; session subtitles remain

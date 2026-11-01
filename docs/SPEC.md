@@ -100,6 +100,13 @@ Autosave on blur / 600 ms debounce. Realtime: other editors' changes appear live
 
 ### 4.3 Export page — `design/screens/Export.png`
 
+- **Reprints required** lists previously printed person/session combinations whose content
+  has changed, with the last print timestamp. Print one session or all required reprints in a
+  combined job. Each replacement contains the person's entire session, with all configured
+  templates and copies. Confirm **Mark as printed** after successful printing to record that
+  PDF's snapshot; previews/downloads/cancelled prints leave the previous baseline intact.
+  Tracking starts at the first confirmed print. Disabled Print All recipients still receive
+  required reprints for their currently selected sessions.
 - Header: "Session packs", event name, summary of enabled people and total sheets across their
   selected sessions, **Download all (PDF)** and global **Print All**.
 - People table (every person in the event): enable switch · avatar/name/role · templates with

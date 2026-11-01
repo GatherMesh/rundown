@@ -10,6 +10,7 @@ import chromium from '@sparticuz/chromium';
 import { PDFDocument } from 'pdf-lib';
 import { computeItems, planPack } from '../../app/src/render/domain';
 import { selectPackJobs } from '../../app/src/render/pack-selection';
+import { packRevision, requiresReprint, type PrintRecord } from '../../app/src/render/reprints';
 import { packSchema } from './api-contract';
 import type { Category, Item, Person, Template, StoredImage } from '../../app/src/types';
 import type { RenderPayload } from '../../app/src/render/renderer';
@@ -27,7 +28,13 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
     eventId = id(data.eventId, 'event'),
     sessionId = data.sessionId === undefined ? undefined : id(data.sessionId, 'session'),
     personId = all ? undefined : id(data.personId, 'person'),
-    jobId = id(data.jobId, 'job');
+    jobId = id(data.jobId, 'job'),
+    reprintsOnly = data.reprintsOnly === true,
+    printedAt = new Date().toISOString();
+  if (data.reprintsOnly !== undefined && typeof data.reprintsOnly !== 'boolean')
+    throw new HttpsError('invalid-argument', 'Invalid reprint selection.');
+  if (reprintsOnly && (!all || sessionId))
+    throw new HttpsError('invalid-argument', 'Reprints must use the event-wide export.');
   const root = db.doc(`tenants/${tenantId}`),
     eventRef = root.collection('events').doc(eventId);
   const membership = await root.collection('members').doc(uid).get();
@@ -63,16 +70,31 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
       templates = templateDocs.docs.map((d) => ({ id: d.id, ...d.data() }) as Template);
     if (personId && !people.some((p) => p.id === personId))
       throw new HttpsError('not-found', 'The person no longer exists.');
-    const candidates = people.filter((p) => (personId ? p.id === personId : p.pack.enabled));
+    const candidates = people.filter((p) =>
+      personId ? p.id === personId : reprintsOnly || p.pack.enabled,
+    );
     for (const p of candidates)
       if (!packSchema.shape.sessionIds.safeParse(p.pack.sessionIds).success)
         throw new HttpsError('failed-precondition', `Check the pack settings for ${p.name}.`);
-    const jobs = selectPackJobs(candidates, sessionDocs.docs, personId, sessionId);
+    let jobs = reprintsOnly
+      ? candidates.flatMap((p) =>
+          selectPackJobs([p], sessionDocs.docs, p.id).map((j) => ({ ...j, coverSheet: false })),
+        )
+      : selectPackJobs(candidates, sessionDocs.docs, personId, sessionId);
+    const records = reprintsOnly
+      ? (await eventRef.collection('printRecords').get()).docs.map((d) => d.data() as PrintRecord)
+      : [];
+    if (reprintsOnly)
+      jobs = jobs.filter((j) =>
+        records.some((r) => r.personId === j.person.id && r.sessionId === j.session.id),
+      );
     if (!jobs.length)
       throw new HttpsError(
         'failed-precondition',
         'Enable at least one session for a person’s pack.',
       );
+    if (jobs.length > 450)
+      throw new HttpsError('resource-exhausted', 'Print up to 450 person/session packs at a time.');
     const recipients = [...new Set(jobs.map((j) => j.person))];
     if (recipients.length > 100 || new Set(jobs.map((j) => j.session.id)).size > 100)
       throw new HttpsError(
@@ -130,11 +152,56 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
         categoryDocs.docs.map((d) => ({ id: d.id, ...d.data() }) as Category),
         people,
       );
+      sessionItems.set(session.id, items);
+    }
+    const makePayload = (
+      person: Person,
+      sessionDoc: (typeof sessionDocs.docs)[number],
+      template: Template,
+    ): RenderPayload => {
+      const session = sessionDoc.data();
+      return {
+        tenant: { name: tenant.name },
+        event: { name: event.name, timeZone: event.timeZone },
+        session: {
+          name: session.name,
+          subtitle: session.subtitle,
+          startAt: session.startAt.toDate().toISOString(),
+        },
+        items: sessionItems.get(sessionDoc.id)!,
+        template,
+        recipient: { id: person.id, name: person.name, role: person.role },
+      };
+    };
+    const revisions: PrintRecord[] = [];
+    for (const { person, session } of jobs) {
+      const revision = await packRevision(
+        person.pack.templates.map((ref) =>
+          makePayload(
+            person,
+            session,
+            templates.find((t) => t.id === ref.templateId)!,
+          ),
+        ),
+        person.pack,
+        event.logo ?? tenant.logo,
+      );
+      revisions.push({ personId: person.id, sessionId: session.id, revision, printedAt });
+    }
+    if (reprintsOnly) {
+      jobs = jobs.filter((j) =>
+        requiresReprint(
+          records.find((r) => r.personId === j.person.id && r.sessionId === j.session.id),
+          revisions.find((r) => r.personId === j.person.id && r.sessionId === j.session.id)!
+            .revision,
+        ),
+      );
+      if (!jobs.length) throw new HttpsError('failed-precondition', 'No reprints are required.');
+    }
+    for (const items of sessionItems.values())
       for (const item of items)
         if (item.imageSlide)
           item.imageSlide = { ...item.imageSlide, url: await resolveImage(item.imageSlide) };
-      sessionItems.set(session.id, items);
-    }
     const [tenantLogo, eventLogo] = await Promise.all([
       resolveImage(tenant.logo),
       resolveImage(event.logo),
@@ -147,24 +214,14 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
       warnings = new Set<string>();
     const memoryCache = new Map<string, { bytes: Uint8Array; count: number }>();
     for (const { person, session: sessionDoc, coverSheet } of jobs) {
-      const session = sessionDoc.data(),
-        items = sessionItems.get(sessionDoc.id)!;
+      const session = sessionDoc.data();
       const documents = new Map<string, Uint8Array>(),
         counts: Record<string, number> = {};
       for (const ref of person.pack.templates) {
         const template = templates.find((t) => t.id === ref.templateId)!;
-        const payload: RenderPayload = {
-          tenant: { name: tenant.name, logoUrl: tenantLogo },
-          event: { name: event.name, timeZone: event.timeZone, logoUrl: eventLogo },
-          session: {
-            name: session.name,
-            subtitle: session.subtitle,
-            startAt: session.startAt.toDate().toISOString(),
-          },
-          items,
-          template,
-          recipient: { id: person.id, name: person.name, role: person.role },
-        };
+        const payload = makePayload(person, sessionDoc, template);
+        payload.tenant.logoUrl = tenantLogo;
+        payload.event.logoUrl = eventLogo;
         const hash = createHash('sha256')
             .update(printHtml)
             .update(JSON.stringify(payload))
@@ -250,11 +307,12 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
           dateStyle: 'full',
           timeStyle: 'short',
         }).format(session.startAt.toDate()),
+        timeZone: event.timeZone,
       });
     }
     await job.update({ message: 'Assembling print-ready packs…' });
     const combined = all || !sessionId;
-    const bytes = await assemblePacks(packs, combined),
+    const bytes = await assemblePacks(packs, combined, printedAt),
       path = `tenants/${tenantId}/exports/${sessionId ?? 'event'}/${all ? 'all' : recipients[0].id}-${jobId}.pdf`;
     await bucket()
       .file(path)
@@ -267,6 +325,10 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
       message: 'Session packs ready',
       path,
       completedAt: new Date(),
+      eventId,
+      revisions: revisions.filter((r) =>
+        jobs.some((j) => j.person.id === r.personId && j.session.id === r.sessionId),
+      ),
     });
     return {
       path,
@@ -293,4 +355,50 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
   } finally {
     await browser?.close().catch(() => {});
   }
+}
+
+// Only acknowledge the server's rendered snapshot, never a client-supplied revision.
+export async function confirmPrinted(uid: string, input: Record<string, unknown>) {
+  const tenantId = id(input.tenantId, 'organisation'),
+    jobId = id(input.jobId, 'job');
+  const db = getFirestore(),
+    root = db.doc(`tenants/${tenantId}`);
+  if (
+    !['owner', 'editor', 'viewer'].includes(
+      (await root.collection('members').doc(uid).get()).data()?.role,
+    )
+  )
+    throw new HttpsError('permission-denied', 'You are not a member of this organisation.');
+  const jobRef = root.collection('exportJobs').doc(jobId);
+  await db.runTransaction(async (tx) => {
+    const job = (await tx.get(jobRef)).data();
+    if (!job || job.createdBy !== uid || job.status !== 'complete' || !job.revisions?.length)
+      throw new HttpsError('failed-precondition', 'This print job is not ready to confirm.');
+    if (job.printConfirmedAt) return;
+    const revisions = job.revisions as PrintRecord[];
+    // Bound the transaction; large exports can be split into smaller print jobs.
+    if (revisions.length > 450)
+      throw new HttpsError(
+        'resource-exhausted',
+        'Confirm up to 450 person/session packs at a time.',
+      );
+    const refs = revisions.map((r) =>
+      root
+        .collection('events')
+        .doc(job.eventId)
+        .collection('printRecords')
+        .doc(
+          createHash('sha256')
+            .update(JSON.stringify([r.personId, r.sessionId]))
+            .digest('hex'),
+        ),
+    );
+    const previous = await tx.getAll(...refs);
+    revisions.forEach((revision, index) => {
+      if (!previous[index].exists || previous[index].data()!.printedAt <= revision.printedAt)
+        tx.set(refs[index], revision);
+    });
+    tx.update(jobRef, { printConfirmedAt: new Date() });
+  });
+  return { confirmed: true };
 }

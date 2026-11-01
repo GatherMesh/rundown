@@ -8,6 +8,9 @@ import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { PDFDocument } from 'pdf-lib';
 import seed from '../reference/seed.json';
+import { computeItems } from '../app/src/render/domain';
+import { packRevision } from '../app/src/render/reprints';
+import type { Category, Item, Person, Template } from '../app/src/types';
 
 const projectId = 'demo-rundown';
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST)
@@ -36,6 +39,14 @@ const ev = {
   timeZone: 'Australia/Brisbane',
 };
 const scope = () => ({ tenantId, eventId: 'event', sessionId: 'session' });
+async function callable(name: string, data: unknown, role = 'owner') {
+  const response = await fetch(base.replace('/api/v1', `/${name}`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${users[role].token}` },
+    body: JSON.stringify({ data }),
+  });
+  return { status: response.status, ...(await response.json()) };
+}
 async function request(operation: string, args: unknown, role = 'owner', status = 200) {
   const response = await fetch(`${base}/${operation}`, {
     method: 'POST',
@@ -500,3 +511,145 @@ it('rejects revoked Firebase ID tokens on subsequent API requests', async () => 
   await request('auth_revoke', {}, 'newmember');
   await request('tenants_list', {}, 'newmember', 401);
 });
+
+it('tracks confirmed printed snapshots and reprints complete affected sessions only', async () => {
+  const root = db.doc(`tenants/${tenantId}`),
+    event = root.collection('events').doc('event');
+  const template = {
+    ...seed.templates[0],
+    id: 'report',
+    itemStyle: 'cueCard',
+    filter: { scope: 'recipient', categoryIds: null },
+  } as Template;
+  await root.collection('templates').doc('report').set(template);
+  const settings = {
+    ...pack,
+    enabled: true,
+    sessionIds: ['session', 'later'],
+    templates: [{ templateId: 'report', copies: 1 }],
+  };
+  const people: Person[] = ['person', 'other'].map((id) => ({
+    id,
+    name: id,
+    pack: settings as Person['pack'],
+  }));
+  const items: Item[] = people.map((p, i) => ({
+    id: p.id,
+    title: `Cue for ${p.name}`,
+    durationSec: 60,
+    order: `a${i}`,
+    categoryId: 'category',
+    personIds: [p.id],
+    av: {},
+  }));
+  items.push({
+    ...items[0],
+    id: 'unchanged',
+    title: 'Unchanged cue in the same session',
+    order: 'a2',
+  });
+  for (const p of people) await event.collection('people').doc(p.id).set(p);
+  for (const [index, sessionId] of ['session', 'later'].entries()) {
+    const session = event.collection('sessions').doc(sessionId),
+      startAt = Timestamp.fromMillis(1806145200000 + index * 86400000);
+    await session.set({ name: sessionId, startAt, sortKey: startAt, itemCount: items.length });
+    for (const item of items) await session.collection('items').doc(item.id).set(item);
+  }
+  const printRecords = event.collection('printRecords');
+  const exportJob = async (extra = {}) => {
+    const jobId = randomUUID();
+    const response = await callable('renderAllPacks', {
+      tenantId,
+      eventId: 'event',
+      jobId,
+      ...extra,
+    });
+    expect(response.status, JSON.stringify(response)).toBe(200);
+    return {
+      jobId,
+      result: response.result,
+      job: (await root.collection('exportJobs').doc(jobId).get()).data()!,
+    };
+  };
+  const initial = await exportJob();
+  expect(initial.result.sourcePages).toBe(6);
+  expect((await printRecords.get()).empty).toBe(true); // Rendering/previewing cannot clear or establish print history.
+  const category = (await root.collection('categories').doc('category').get()).data()!;
+  const session = (await event.collection('sessions').doc('session').get()).data()!;
+  const clientRevision = await packRevision(
+    [
+      {
+        tenant: { name: 'API test', logoUrl: 'https://example.com/client-url' },
+        event: { name: ev.name, timeZone: ev.timeZone },
+        session: { name: 'session', startAt: session.startAt.toDate().toISOString() },
+        template,
+        recipient: { id: 'person', name: 'person' },
+        items: computeItems(items, [{ id: 'category', ...category } as Category], people),
+      },
+    ],
+    people[0].pack,
+  );
+  expect(
+    initial.job.revisions.find((r: any) => r.personId === 'person' && r.sessionId === 'session')
+      .revision,
+  ).toBe(clientRevision);
+  expect(
+    (await callable('confirmPrint', { tenantId, jobId: initial.jobId }, 'viewer')).status,
+  ).toBe(400); // Cannot confirm someone else's job.
+  expect(
+    (await callable('confirmPrint', { tenantId, jobId: initial.jobId }, 'outsider')).status,
+  ).toBe(403);
+  expect((await callable('confirmPrint', { tenantId, jobId: initial.jobId })).status).toBe(200);
+  expect((await printRecords.get()).size).toBe(4);
+  expect((await callable('confirmPrint', { tenantId, jobId: initial.jobId })).status).toBe(200); // Idempotent.
+  await event
+    .collection('sessions')
+    .doc('session')
+    .collection('items')
+    .doc('person')
+    .update({ title: 'Updated cue' });
+  // A person printed individually still needs updates when excluded from global Print All.
+  await event.collection('people').doc('person').update({ 'pack.enabled': false });
+  const reprint = await exportJob({ reprintsOnly: true });
+  expect(reprint.result.sourcePages).toBe(2); // The unchanged cue is reprinted too.
+  expect(reprint.job.revisions.map((r: any) => [r.personId, r.sessionId])).toEqual([
+    ['person', 'session'],
+  ]);
+  // An edit made after this PDF was generated must survive its confirmation.
+  await event
+    .collection('sessions')
+    .doc('session')
+    .collection('items')
+    .doc('person')
+    .update({ script: 'New script while printing' });
+  await callable('confirmPrint', { tenantId, jobId: reprint.jobId });
+  const latest = await exportJob({ reprintsOnly: true });
+  expect(latest.job.revisions).toHaveLength(1);
+  await callable('confirmPrint', { tenantId, jobId: latest.jobId });
+  expect(
+    (
+      await callable('renderAllPacks', {
+        tenantId,
+        eventId: 'event',
+        jobId: randomUUID(),
+        reprintsOnly: true,
+      })
+    ).status,
+  ).toBe(400);
+  // A previously unconfirmed older print job cannot roll back the recorded version.
+  const old = { ...initial.job, printConfirmedAt: undefined };
+  delete old.printConfirmedAt;
+  const oldJob = randomUUID();
+  await root.collection('exportJobs').doc(oldJob).set(old);
+  await callable('confirmPrint', { tenantId, jobId: oldJob });
+  expect(
+    (
+      await callable('renderAllPacks', {
+        tenantId,
+        eventId: 'event',
+        jobId: randomUUID(),
+        reprintsOnly: true,
+      })
+    ).status,
+  ).toBe(400);
+}, 120_000);

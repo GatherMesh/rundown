@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase-admin/app';
 import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
 import { setGlobalOptions } from 'firebase-functions/v2/options';
-import { exportPacks } from './export';
+import { exportPacks, confirmPrinted } from './export';
 import { apiHandler } from './api-http';
 import { deleteSessionData } from './delete-session';
 initializeApp();
@@ -13,6 +13,10 @@ setGlobalOptions({
   concurrency: 1,
 });
 export const deleteSession = onCall(deleteSessionData);
+export const confirmPrint = onCall((request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to confirm printing.');
+  return confirmPrinted(request.auth.uid, request.data ?? {});
+});
 export const renderPack = onCall((request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to print session packs.');
   return exportPacks(request.auth.uid, request.data ?? {}, false);

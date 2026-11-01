@@ -91,6 +91,24 @@ it('allows editor data changes but prevents escalation and export-job forgery', 
   await assertFails(updateDoc(doc(db, 'tenants/a/members/editor'), { role: 'owner' }));
   await assertFails(setDoc(doc(db, 'tenants/a/exportJobs/job'), { status: 'complete' }));
 });
+it('lets members read print records, but only the server can record printed revisions', async () => {
+  const path = 'tenants/a/events/event/printRecords/record';
+  await env.withSecurityRulesDisabled(async (c) =>
+    setDoc(doc(c.firestore(), path), {
+      personId: 'person',
+      sessionId: 'session',
+      revision: 'hash',
+      printedAt: '2026-11-01T00:00:00Z',
+    }),
+  );
+  for (const role of ['owner', 'editor', 'viewer']) {
+    const record = doc(env.authenticatedContext(role).firestore(), path);
+    await assertSucceeds(getDoc(record));
+    await assertFails(updateDoc(record, { revision: 'forged' }));
+    await assertFails(deleteDoc(record));
+  }
+  await assertFails(getDoc(doc(env.authenticatedContext('outsider').firestore(), path)));
+});
 it.each(['owner', 'editor'])('allows %s to create and switch to Dense Cards', async (role) => {
   const db = env.authenticatedContext(role).firestore();
   const template = doc(db, `tenants/a/templates/dense-${role}`);

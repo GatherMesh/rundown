@@ -12,6 +12,7 @@ tenants/{tenantId}                              Tenant
     people/{personId}                           Person  (+ pack settings)
     sessions/{sessionId}                        Session
       items/{itemId}                            Item
+    printRecords/{hashOfPersonAndSession}        Last confirmed printed session snapshot
 users/{uid}                                     UserProfile { tenantIds[], lastTenantId }
 ```
 
@@ -104,6 +105,16 @@ audio | video | lighting | camera | slides | imageSlide`.
 
 ### StoredImage
 `{ path: string, name: string, width: number, height: number, contentType: string }`
+
+### Print history
+
+`printRecords` documents contain `{ personId, sessionId, revision: SHA256, printedAt: ISO8601 }`.
+They store a historical print snapshot, not current derived page counts or times. Members can
+read them; only the authenticated `confirmPrint({ tenantId, jobId })` function writes them from
+the completed export job's server-generated `revisions`. Jobs also store `eventId` and
+`printConfirmedAt`. Confirmation is atomic, idempotent, limited to the job's creator, and cannot
+replace a newer record. `renderAllPacks({ ..., reprintsOnly: true })` compares these records
+against current recipient/session content and exports only the outstanding full sessions.
 
 ## Queries & indexes
 

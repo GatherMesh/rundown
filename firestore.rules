@@ -22,6 +22,7 @@ service cloud.firestore {
    match /categories/{id}{allow read:if member(t);allow create,update:if edit(t)&&name(request.resource.data)&&request.resource.data.order is number&&request.resource.data.bg.matches('^#[a-fA-F0-9]{6}$')&&request.resource.data.fg.matches('^#[a-fA-F0-9]{6}$');allow delete:if edit(t);}
    match /templates/{id}{allow read:if member(t);allow create,update:if edit(t)&&name(request.resource.data)&&request.resource.data.paper=='A4'&&request.resource.data.orientation in ['portrait','landscape']&&request.resource.data.itemStyle in ['table','cards','denseCards','cueCard','compact']&&request.resource.data.columns is list&&request.resource.data.columns.size()<=16&&request.resource.data.filter.scope in ['all','recipient','recipientPlusNeighbours'];allow delete:if edit(t);}
    match /events/{eventId}{
+    match /printRecords/{id}{allow read:if member(t);allow write:if false;}
     allow read:if member(t);allow create,update:if edit(t)&&name(request.resource.data)&&request.resource.data.timeZone is string&&request.resource.data.startDate is string&&request.resource.data.endDate is string;allow delete:if edit(t);
     match /people/{id}{allow read:if member(t);allow create,update:if edit(t)&&name(request.resource.data)&&pack(request.resource.data.pack);allow delete:if edit(t);}
     match /sessions/{sessionId}{

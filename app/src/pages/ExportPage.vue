@@ -10,6 +10,7 @@ import { payload } from '../render/payload';
 import { renderDocument } from '../render/renderer';
 import { computeItems, planPack } from '../render/domain';
 import { includesSession, selectPackJobs } from '../render/pack-selection';
+import { packRevision, requiresReprint, printDate, type PrintRecord } from '../render/reprints';
 import type { Item, PackSettings, Person, Session } from '../types';
 const w = useWorkspace(),
   selected = ref('margaret'),
@@ -24,6 +25,60 @@ const w = useWorkspace(),
   addTemplateId = ref(''),
   pdfUrl = ref(''),
   pdfOpen = ref(false);
+const printRecords = ref<PrintRecord[]>([]),
+  revisions = ref<Record<string, Record<string, string>>>({}),
+  recordsReady = ref(false),
+  pendingPrint = ref<{ tenantId: string; jobId: string } | null>(null),
+  confirming = ref(false);
+const reprints = computed(() =>
+  w.people.flatMap((person) =>
+    enabledSessions(person).flatMap((session) => {
+      const record = printRecords.value.find(
+          (r) => r.personId === person.id && r.sessionId === session.id,
+        ),
+        revision = revisions.value[session.id]?.[person.id];
+      return revision && requiresReprint(record, revision)
+        ? [{ person, session, record: record! }]
+        : [];
+    }),
+  ),
+);
+watch(
+  () => [w.tenantId, w.eventId],
+  (_, __, cleanup) => {
+    printRecords.value = [];
+    recordsReady.value = false;
+    pendingPrint.value = null;
+    pdfOpen.value = false;
+    if (!w.tenantId || !w.eventId) return;
+    cleanup(
+      onSnapshot(
+        collection(db, `${w.eventPath()}/printRecords`),
+        { includeMetadataChanges: true },
+        (snapshot) => {
+          printRecords.value = snapshot.docs.map((d) => d.data() as PrintRecord);
+          recordsReady.value = !snapshot.metadata.fromCache;
+        },
+        w.fail,
+      ),
+    );
+  },
+  { immediate: true },
+);
+async function markPrinted() {
+  if (!pendingPrint.value || confirming.value) return;
+  confirming.value = true;
+  try {
+    await httpsCallable(functions, 'confirmPrint')(pendingPrint.value);
+    pendingPrint.value = null;
+    pdfOpen.value = false;
+    Notify.create({ type: 'positive', message: 'Printed copies recorded.' });
+  } catch (e) {
+    w.fail(e);
+  } finally {
+    confirming.value = false;
+  }
+}
 const person = computed(() => w.people.find((p) => p.id === selected.value) ?? w.people[0]);
 const duplicateOpen = ref(false),
   duplicateSourceId = ref(''),
@@ -204,8 +259,7 @@ watch(
         id: p.id,
         name: p.name,
         role: p.role,
-        sessionIds: p.pack.sessionIds,
-        templates: p.pack.templates.map((t) => t.templateId),
+        pack: p.pack,
       })),
     ]),
   () => {
@@ -213,18 +267,22 @@ watch(
     clearTimeout(timer);
     calculating.value = true;
     counts.value = {};
+    revisions.value = {};
     warning.value = '';
     timer = setTimeout(async () => {
       const next: typeof counts.value = {},
+        nextRevisions: typeof revisions.value = {},
         warnings = new Set<string>();
       try {
         for (const session of w.sessions) {
           if (!sessionItems.value[session.id]) continue;
           const orderedItems = computeItems(sessionItems.value[session.id], w.categories, w.people);
           next[session.id] = {};
+          nextRevisions[session.id] = {};
           for (const p of w.people) {
             if (!includesSession(p.pack, session.id) && p.id !== person.value?.id) continue;
             next[session.id][p.id] = {};
+            const documents = [];
             for (const t of p.pack.templates) {
               if (run !== version) return;
               const template = w.templates.find((v) => v.id === t.templateId);
@@ -232,25 +290,32 @@ watch(
                 warnings.add(`${p.name}: a pack references a missing template.`);
                 continue;
               }
-              const r = await renderDocument(
-                payload(
-                  {
-                    session,
-                    orderedItems,
-                    tenant: w.tenant,
-                    event: w.event,
-                  },
-                  template,
-                  p,
-                ),
+              const document = payload(
+                {
+                  session,
+                  orderedItems,
+                  tenant: w.tenant,
+                  event: w.event,
+                },
+                template,
+                p,
               );
+              documents.push(document);
+              const r = await renderDocument(document);
               next[session.id][p.id][t.templateId] = r.pageCount;
               if (r.warning) warnings.add(`${p.name} · ${session.name}: ${r.warning}`);
             }
+            if (documents.length === p.pack.templates.length && documents.length)
+              nextRevisions[session.id][p.id] = await packRevision(
+                documents,
+                p.pack,
+                w.event?.logo ?? w.tenant?.logo,
+              );
           }
         }
         if (run === version) {
           counts.value = next;
+          revisions.value = nextRevisions;
           warning.value = [...warnings].join(' · ');
         }
       } catch (e) {
@@ -267,11 +332,19 @@ onUnmounted(() => {
   version++;
   if (pdfUrl.value) URL.revokeObjectURL(pdfUrl.value);
 });
-async function generate(action: 'download' | 'print' | 'preview', p?: Person, session?: Session) {
+async function generate(
+  action: 'download' | 'print' | 'preview',
+  p?: Person,
+  session?: Session,
+  reprintsOnly = false,
+) {
   if (busy.value || !w.event || !w.sessions.length) return;
   busy.value = true;
+  pendingPrint.value = null;
   progress.value = 'Preparing session packs…';
   const jobId = crypto.randomUUID();
+  const tenantId = w.tenantId,
+    eventId = w.eventId;
   const stop = onSnapshot(
     doc(db, `${w.base()}/exportJobs/${jobId}`),
     (s) => {
@@ -282,17 +355,19 @@ async function generate(action: 'download' | 'print' | 'preview', p?: Person, se
   try {
     await w.flush();
     const call = httpsCallable<
-      Record<string, string>,
+      Record<string, string | boolean>,
       { path: string; url?: string; warning?: string }
     >(functions, p ? 'renderPack' : 'renderAllPacks', { timeout: 300000 });
     const result = await call({
-      tenantId: w.tenantId,
-      eventId: w.eventId,
+      tenantId,
+      eventId,
+      ...(reprintsOnly ? { reprintsOnly: true } : {}),
       ...(session ? { sessionId: session.id } : {}),
       jobId,
       ...(p ? { personId: p.id } : {}),
     });
     const blob = await getBlob(storageRef(storage, result.data.path));
+    if (tenantId !== w.tenantId || eventId !== w.eventId) return;
     if (pdfUrl.value) URL.revokeObjectURL(pdfUrl.value);
     pdfUrl.value = URL.createObjectURL(blob);
     if (result.data.warning)
@@ -305,6 +380,7 @@ async function generate(action: 'download' | 'print' | 'preview', p?: Person, se
     } else if (action === 'preview') {
       pdfOpen.value = true;
     } else {
+      pendingPrint.value = { tenantId, jobId };
       Notify.create({
         message:
           p && session
@@ -382,6 +458,58 @@ const initials = (p: Person) =>
       ><q-banner v-if="busy" class="bg-blue-1" role="status"
         ><q-spinner class="q-mr-sm" />{{ progress }}</q-banner
       >
+      <section class="card q-pa-md q-mb-md" aria-labelledby="reprints-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="reprints-heading">Reprints required</h2>
+            <p class="muted">Complete sessions for people whose printed copies have changed.</p>
+          </div>
+          <q-btn
+            color="primary"
+            no-caps
+            icon="print"
+            label="Print required reprints"
+            :loading="busy"
+            :disable="calculating || !recordsReady || !sessionItemsReady || !reprints.length"
+            @click="generate('print', undefined, undefined, true)"
+          />
+        </div>
+        <p v-if="calculating || !recordsReady || !sessionItemsReady" class="muted" role="status">
+          Checking printed copies…
+        </p>
+        <q-list v-else-if="reprints.length" separator>
+          <q-item
+            v-for="entry in reprints"
+            :key="JSON.stringify([entry.person.id, entry.session.id])"
+          >
+            <q-item-section>
+              <q-item-label
+                ><strong>{{ entry.person.name }}</strong> · {{ entry.session.name }}</q-item-label
+              >
+              <q-item-label caption
+                >Last printed
+                {{
+                  printDate(entry.record.printedAt, w.event?.timeZone ?? 'Australia/Brisbane')
+                }}</q-item-label
+              >
+            </q-item-section>
+            <q-item-section side>
+              <q-btn
+                outline
+                no-caps
+                icon="print"
+                label="Print session"
+                color="primary"
+                :loading="busy"
+                @click="generate('print', entry.person, entry.session)"
+              />
+            </q-item-section>
+          </q-item>
+        </q-list>
+        <p v-else class="muted">
+          No reprints required. Print packs and mark them as printed to start tracking changes.
+        </p>
+      </section>
       <section class="card export-table-card">
         <div class="table-scroll">
           <table class="export-table">
@@ -787,6 +915,18 @@ const initials = (p: Person) =>
             v-close-popup
             aria-label="Close PDF"
           /></div></q-card-section
+      ><q-banner v-if="pendingPrint" class="bg-blue-1" inline-actions>
+        After printing successfully, mark these copies as printed. Cancelling leaves reprints
+        outstanding.
+        <template #action>
+          <q-btn
+            color="primary"
+            no-caps
+            label="Mark as printed"
+            :loading="confirming"
+            @click="markPrinted"
+          />
+        </template> </q-banner
       ><iframe :src="pdfUrl" title="Session pack PDF preview" /></q-card
   ></q-dialog>
 </template>

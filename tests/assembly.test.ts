@@ -5,6 +5,53 @@ import { planPack } from '../app/src/render/domain';
 import { selectPackJobs } from '../app/src/render/pack-selection';
 import { defaultPack, type Person, type PackSettings } from '../app/src/types';
 
+it.each(['fit', 'actual', '2up', '4up'] as const)(
+  'stamps each content side and cover at physical sheet size, leaving padding blank (%s)',
+  async (scaling) => {
+    const source = await PDFDocument.create();
+    for (let i = 0; i < 3; i++) source.addPage([595.276, 841.89]).drawText('Session content');
+    const settings: PackSettings = {
+      ...defaultPack(),
+      scaling,
+      sides: 'duplexShort',
+      coverSheet: true,
+      templates: [{ templateId: 't', copies: 1 }],
+    };
+    const plan = planPack(settings, { t: 3 });
+    const pdf = await PDFDocument.load(
+      await assemblePacks(
+        [
+          {
+            person: { id: 'person', name: 'Person', pack: settings },
+            plan,
+            documents: new Map([['t', await source.save()]]),
+            templates: [],
+            sessionName: 'Session',
+            eventName: 'Event',
+            dateTime: 'Date',
+            timeZone: 'Australia/Brisbane',
+          },
+        ],
+        true,
+        '2026-11-01T04:56:07Z',
+      ),
+    );
+    expect(pdf.getPageCount()).toBe(plan.sides.length);
+    for (const [index, side] of plan.sides.entries()) {
+      const streams = pdf.getPage(index).node.Contents() as PDFArray | undefined;
+      if (side.kind === 'blank') {
+        expect(streams).toBeUndefined();
+        continue;
+      }
+      const content = Array.from({ length: streams!.size() }, (_, i) =>
+        Buffer.from(decodePDFRawStream(streams!.lookup(i, PDFRawStream)).decode()).toString(),
+      ).join('\n');
+      // One unscaled physical-sheet footer, independent of imposed page/copy count.
+      expect(content.match(/1 0 0 1 [-\d.]+ 12 Tm/g)).toHaveLength(1);
+    }
+  },
+);
+
 it.each(['single', 'duplexLong', 'duplexShort'] as const)(
   'assembles one person-wide cover with a blank back (%s)',
   async (sides) => {
