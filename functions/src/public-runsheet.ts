@@ -5,26 +5,33 @@ import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
 import { computeItems, filterItems } from '../../app/src/render/domain';
 import { includesSession } from '../../app/src/render/pack-selection';
 import { renderRunsheet, type RenderPayload } from '../../app/src/render/renderer';
+import { sessionRunsheetTemplate } from '../../app/src/render/session-template';
 import type { Category, Item, Person, StoredImage, Template } from '../../app/src/types';
 import type { PublicRunsheet, RunsheetLink } from '../../app/src/types/public-runsheet';
 
 function scope(data: Record<string, unknown>) {
-  const ids = ['tenantId', 'eventId', 'personId'] as const;
+  const kind = data.personId === undefined ? 'session' : 'person';
+  const targetKey = kind === 'session' ? 'sessionId' : 'personId';
+  const ids = ['tenantId', 'eventId', targetKey] as const;
   for (const key of ids)
     if (typeof data[key] !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(data[key]))
       throw new HttpsError('invalid-argument', `Invalid ${key}.`);
-  const { tenantId, eventId, personId } = data as Pick<RunsheetLink, (typeof ids)[number]>;
+  const tenantId = data.tenantId as string,
+    eventId = data.eventId as string;
+  const targetId = data[targetKey] as string;
   const db = getFirestore();
   const tenant = db.doc(`tenants/${tenantId}`);
   const event = tenant.collection('events').doc(eventId);
   return {
     tenantId,
     eventId,
-    personId,
+    kind,
     tenant,
     event,
-    person: event.collection('people').doc(personId),
-    link: event.collection('runsheetLinks').doc(personId),
+    target: event.collection(kind === 'session' ? 'sessions' : 'people').doc(targetId),
+    link: event
+      .collection(kind === 'session' ? 'sessionRunsheetLinks' : 'runsheetLinks')
+      .doc(targetId),
   };
 }
 
@@ -34,22 +41,25 @@ export async function createRunsheetLink(request: CallableRequest): Promise<Runs
   const member = await s.tenant.collection('members').doc(request.auth.uid).get();
   if (!['owner', 'editor'].includes(member.data()?.role))
     throw new HttpsError('permission-denied', 'Editor access is required to share a runsheet.');
-  // Keep the token separate from person documents, which editors can otherwise overwrite.
+  // Keep link tokens separate from event data that editors can overwrite.
   const token = await getFirestore().runTransaction(async (tx) => {
-    const [tenant, event, person, link] = await Promise.all([
+    const [tenant, event, target, link] = await Promise.all([
       tx.get(s.tenant),
       tx.get(s.event),
-      tx.get(s.person),
+      tx.get(s.target),
       tx.get(s.link),
     ]);
-    if (!tenant.exists || !event.exists || !person.exists)
-      throw new HttpsError('not-found', 'This person or event no longer exists.');
+    if (!tenant.exists || !event.exists || !target.exists)
+      throw new HttpsError('not-found', 'This person, session or event no longer exists.');
     if (link.exists) return link.data()!.token as string;
     const token = randomBytes(24).toString('hex');
     tx.create(s.link, { token, createdBy: request.auth!.uid, createdAt: new Date() });
     return token;
   });
-  return { tenantId: s.tenantId, eventId: s.eventId, personId: s.personId, token };
+  const base = { tenantId: s.tenantId, eventId: s.eventId, token };
+  return s.kind === 'session'
+    ? { ...base, sessionId: s.target.id }
+    : { ...base, personId: s.target.id };
 }
 
 export async function getPublicRunsheet(request: CallableRequest): Promise<PublicRunsheet> {
@@ -66,16 +76,18 @@ export async function getPublicRunsheet(request: CallableRequest): Promise<Publi
   )
     throw new HttpsError('not-found', 'This runsheet link is unavailable.');
 
-  const [tenant, event, personDoc, sessionDocs] = await Promise.all([
+  const [tenant, event, target, sessionDocs] = await Promise.all([
     s.tenant.get(),
     s.event.get(),
-    s.person.get(),
-    s.event.collection('sessions').orderBy('sortKey').get(),
+    s.target.get(),
+    s.kind === 'person' ? s.event.collection('sessions').orderBy('sortKey').get() : null,
   ]);
-  if (!tenant.exists || !event.exists || !personDoc.exists)
+  if (!tenant.exists || !event.exists || !target.exists)
     throw new HttpsError('not-found', 'This runsheet link is unavailable.');
-  const person = { ...personDoc.data(), id: personDoc.id } as Person;
-  const sessions = sessionDocs.docs.filter((d) => includesSession(person.pack, d.id));
+  const person = s.kind === 'person' ? ({ ...target.data(), id: target.id } as Person) : null;
+  const sessions = person
+    ? sessionDocs!.docs.filter((d) => includesSession(person.pack, d.id))
+    : [target];
   const session =
     data.sessionId === undefined ? sessions[0] : sessions.find((d) => d.id === data.sessionId);
   if (data.sessionId !== undefined && !session)
@@ -83,11 +95,11 @@ export async function getPublicRunsheet(request: CallableRequest): Promise<Publi
   const result: PublicRunsheet = {
     eventName: event.data()!.name,
     timeZone: event.data()!.timeZone,
-    person: { name: person.name, ...(person.role ? { role: person.role } : {}) },
+    person: person ? { name: person.name, ...(person.role ? { role: person.role } : {}) } : null,
     sessions: sessions.map((d) => ({
       id: d.id,
-      name: d.data().name,
-      startAt: d.data().startAt.toDate().toISOString(),
+      name: d.data()!.name,
+      startAt: d.data()!.startAt.toDate().toISOString(),
     })),
     sessionId: session?.id ?? null,
     views: [],
@@ -95,7 +107,7 @@ export async function getPublicRunsheet(request: CallableRequest): Promise<Publi
   if (!session) return result;
 
   const db = getFirestore();
-  const templateIds = [...new Set(person.pack.templates.map((t) => t.templateId))];
+  const templateIds = [...new Set(person?.pack.templates.map((t) => t.templateId) ?? [])];
   const [itemDocs, categoryDocs, peopleDocs, templateDocs] = await Promise.all([
     session.ref.collection('items').orderBy('order').limit(501).get(),
     s.tenant.collection('categories').get(),
@@ -111,9 +123,9 @@ export async function getPublicRunsheet(request: CallableRequest): Promise<Publi
     categoryDocs.docs.map((d) => ({ ...d.data(), id: d.id }) as Category),
     peopleDocs.docs.map((d) => ({ ...d.data(), id: d.id }) as Person),
   );
-  const templates = templateDocs
-    .filter((d) => d.exists)
-    .map((d) => ({ ...d.data(), id: d.id }) as Template);
+  const templates = person
+    ? templateDocs.filter((d) => d.exists).map((d) => ({ ...d.data(), id: d.id }) as Template)
+    : [sessionRunsheetTemplate];
   const imageCache = new Map<string, Promise<string | undefined>>();
   const imageUrl = (image: StoredImage): Promise<string | undefined> => {
     if (image.path.startsWith('seed/')) return Promise.resolve(undefined);
@@ -142,16 +154,16 @@ export async function getPublicRunsheet(request: CallableRequest): Promise<Publi
       tenant: { name: tenant.data()!.name },
       event: { name: result.eventName, timeZone: result.timeZone },
       session: {
-        name: session.data().name,
-        startAt: session.data().startAt.toDate().toISOString(),
+        name: session.data()!.name,
+        startAt: session.data()!.startAt.toDate().toISOString(),
       },
-      recipient: { id: person.id, name: person.name, role: person.role },
+      recipient: person ? { id: person.id, name: person.name, role: person.role } : null,
       items,
       template,
     };
     if (template.columns.some((c) => c.key === 'imageSlide' && c.visible))
       await Promise.all(
-        filterItems(items, template, person.id)
+        filterItems(items, template, person?.id ?? null)
           .filter((i) => !i.context)
           .map(async (item) => {
             if (item.imageSlide) item.imageSlide.url = await imageUrl(item.imageSlide);

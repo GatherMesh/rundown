@@ -61,6 +61,27 @@ try {
     'clipboard denial offers a selectable link',
   );
   await page.locator('::-p-text(Done)').click();
+  await page.waitForSelector('.q-dialog', { hidden: true });
+  await context.overridePermissions(origin, [
+    'clipboard-read',
+    'clipboard-write',
+    'clipboard-sanitized-write',
+  ]);
+  await page.click('[aria-label="Session to share"]');
+  await page.keyboard.press('ArrowDown');
+  await page.waitForSelector('[role="option"]');
+  await page.evaluate(() =>
+    [...document.querySelectorAll('[role="option"]')]
+      .find((el) => el.textContent.includes('Saturday Evening Celebration'))
+      .click(),
+  );
+  await page.click('[aria-label="Copy generic session link"]');
+  await page.waitForFunction(async () =>
+    (await navigator.clipboard.readText()).includes('/session/'),
+  );
+  const genericLink = await page.evaluate(() => navigator.clipboard.readText());
+  assert.ok(genericLink.startsWith(`${origin}/session/qcec/easter-2027/sat-evening/`));
+  await page.screenshot({ path: 'artifacts/export-copy-link.png' });
 
   const [, , tenantId, eventId, personId, token] = new URL(link).pathname.split('/');
   const params = { tenantId, eventId, personId, token };
@@ -107,9 +128,44 @@ try {
   );
   await mobile.goto(link.replace(token, '0'.repeat(48)));
   await mobile.waitForFunction(() => document.body.textContent.includes('Runsheet unavailable'));
+  const [, , genericTenant, genericEvent, genericSession, genericToken] = new URL(
+    genericLink,
+  ).pathname.split('/');
+  const genericParams = {
+    tenantId: genericTenant,
+    eventId: genericEvent,
+    sessionId: genericSession,
+    token: genericToken,
+  };
+  const generic = await call('publicRunsheet', genericParams);
+  assert.equal(generic.status, 200);
+  assert.equal(generic.body.result.person, null);
+  assert.deepEqual(
+    generic.body.result.sessions.map((s) => s.id),
+    ['sat-evening'],
+  );
+  assert.equal(
+    (await call('publicRunsheet', { ...genericParams, sessionId: 'fri-opening' })).status,
+    404,
+  );
+  await mobile.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+  await mobile.goto(genericLink);
+  await mobile.waitForSelector('.runsheet-items .print-card');
+  assert.equal(await mobile.$eval('h1', (el) => el.textContent), 'Saturday Evening Celebration');
+  assert.equal(await mobile.$$eval('.runsheet-items .print-card', (els) => els.length), 10);
+  assert.equal(await mobile.$('#runsheet-session'), null);
+  assert.equal(await mobile.$('.recipient-row'), null);
+  await mobile.screenshot({ path: 'artifacts/generic-session-mobile.png' });
+  for (const width of [320, 390, 768, 1280]) {
+    await mobile.setViewport({ width, height: 844, isMobile: true, hasTouch: true });
+    assert.ok(
+      await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      `generic runsheet fits at ${width}px`,
+    );
+  }
   assert.deepEqual(errors, []);
   console.log(
-    'Public runsheet smoke passed: stable Copy Link, anonymous reads, session/view selection, template filtering, invalid links, and 320–1280px layouts.',
+    'Public runsheet smoke passed: person and generic session links, anonymous reads, session/view selection, filtering, invalid links, and 320–1280px layouts.',
   );
 } catch (error) {
   for (const [index, page] of (await browser.pages()).entries()) {

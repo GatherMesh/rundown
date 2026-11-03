@@ -11,7 +11,7 @@ Firebase project: `gathermesh-rundown`, Sydney (`australia-southeast1`).
 - Realtime sessions with autosave, offline persistence, computed timing, drag reorder, quick-add, duplication, item deletion with undo, AV fields and slide uploads.
 - A4 portrait/landscape templates with configurable headers, fields, widths, text colours, filters and five item styles. Cards and Dense Cards use category-coloured left accents; live recipient previews use the same measured renderer as server PDFs.
 - Person-specific session selections and packs with ordered templates, copies, collating, covers, duplex settings, 2-up/4-up imposition, download and browser printing.
-- Public mobile runsheets: Copy Link for each person on Export, with session/view selection and the same template content in a continuous scroll.
+- Public mobile runsheets: copy icons on Export share person-specific packs or complete sessions, with the same template content in a continuous scroll.
 - Tenant membership rules with owner/editor/viewer permissions, image-upload restrictions and authenticated callable exports.
 
 ## Local development
@@ -79,12 +79,15 @@ The production app starts with no organisation data. Sign in, create your organi
 
 ## Print behavior
 
-On **Export**, owners/editors can use **Copy Link** beside any person to share their mobile runsheet.
+On **Export**, owners/editors can use the copy icon beside any person to share their mobile runsheet.
 Anyone with that link can view their currently selected sessions and templates without signing in.
 Links remain the same as content and pack selections change; open, change session or use **Refresh**
 to load saved updates. Each template appears once, with its fields, filters and recipient highlights;
 print copies, covers and page breaks are omitted. Empty packs show an empty state until configured.
 Deploy Hosting and the `shareRunsheet` / `publicRunsheet` Functions together to enable this feature.
+**Generic session link** on Export shares one chosen session's full runsheet, including all item
+fields, without selecting a person or configuring a pack. It uses the same mobile public page and
+requires no login; each generic token is valid only for its session.
 
 Individual session PDFs set the selected duplex viewer preference. Print all for person includes that person’s checked sessions; global Print All includes every enabled person’s checked sessions. Combined jobs always use two-sided, long-edge printing; single-sided recipients receive blank backs, and short-edge backs rotate 180°. Browser/printer settings can override PDF preferences, so the app displays the required setting before printing.
 

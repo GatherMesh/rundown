@@ -16,9 +16,15 @@ import type { Item, PackSettings, Person, Session } from '../types';
 import type { RunsheetLink } from '../types/public-runsheet';
 const router = useRouter();
 const copyingLink = ref(''),
-  shareUrl = ref('');
-async function copyLink(p: Person) {
-  copyingLink.value = p.id;
+  shareUrl = ref(''),
+  genericSessionId = ref('');
+const genericSession = computed(
+  () => w.sessions.find((s) => s.id === genericSessionId.value) ?? w.session ?? w.sessions[0],
+);
+async function copyLink(p?: Person) {
+  const session = genericSession.value;
+  if (!p && !session) return;
+  copyingLink.value = p?.id ?? 'session';
   const tenantId = w.tenantId,
     eventId = w.eventId;
   try {
@@ -29,15 +35,21 @@ async function copyLink(p: Person) {
     )({
       tenantId,
       eventId,
-      personId: p.id,
+      ...(p ? { personId: p.id } : { sessionId: session!.id }),
     });
     const url = new URL(
-      router.resolve({ name: 'public-runsheet', params: { ...result.data } }).href,
+      router.resolve({
+        name: p ? 'public-runsheet' : 'public-session-runsheet',
+        params: { ...result.data },
+      }).href,
       location.origin,
     ).href;
     try {
       await copyToClipboard(url);
-      Notify.create({ type: 'positive', message: `Runsheet link copied for ${p.name}.` });
+      Notify.create({
+        type: 'positive',
+        message: `Runsheet link copied for ${p?.name ?? session!.name}.`,
+      });
     } catch {
       shareUrl.value = url;
     }
@@ -496,6 +508,42 @@ const initials = (p: Person) =>
       ><q-banner v-if="busy" class="bg-blue-1" role="status"
         ><q-spinner class="q-mr-sm" />{{ progress }}</q-banner
       >
+      <section class="card q-pa-md q-mb-md" aria-labelledby="session-link-heading">
+        <h2 id="session-link-heading">Generic session link</h2>
+        <p class="muted q-mt-xs">
+          Share every item, notes, script and AV details for one session. Anyone with the link can
+          view it.
+        </p>
+        <div class="row items-center q-col-gutter-md q-mt-xs">
+          <div class="col-12 col-sm">
+            <q-select
+              :model-value="genericSession?.id"
+              :options="
+                w.sessions.map((s) => ({ label: `${s.name} · ${sessionDate(s)}`, value: s.id }))
+              "
+              outlined
+              dense
+              emit-value
+              map-options
+              label="Session to share"
+              aria-label="Session to share"
+              @update:model-value="genericSessionId = $event"
+            />
+          </div>
+          <div class="col-auto">
+            <q-btn
+              outline
+              no-caps
+              icon="content_copy"
+              aria-label="Copy generic session link"
+              :loading="copyingLink === 'session'"
+              :disable="!w.canEdit || !!copyingLink || !genericSession"
+              @click="copyLink()"
+              ><q-tooltip>Copy session link</q-tooltip></q-btn
+            >
+          </div>
+        </div>
+      </section>
       <section class="card q-pa-md q-mb-md" aria-labelledby="reprints-heading">
         <div class="section-heading">
           <div>
@@ -605,13 +653,13 @@ const initials = (p: Person) =>
                     flat
                     no-caps
                     dense
-                    icon="link"
-                    label="Copy Link"
+                    icon="content_copy"
                     :aria-label="'Copy public runsheet link for ' + p.name"
                     :loading="copyingLink === p.id"
                     :disable="!w.canEdit || !!copyingLink"
                     @click.stop="copyLink(p)"
-                  />
+                    ><q-tooltip>Copy public link</q-tooltip></q-btn
+                  >
                   <q-btn
                     outline
                     no-caps
@@ -633,9 +681,7 @@ const initials = (p: Person) =>
           </table>
         </div>
       </section>
-      <p class="muted export-note">
-        Copy Link shares a mobile runsheet with anyone who has the link. No sign-in required.
-      </p>
+      <p class="muted export-note">Public links open a mobile runsheet. No sign-in required.</p>
       <p class="muted export-note">
         Choose a person to select their sessions. Print All includes every enabled person’s selected
         sessions, grouped by person. Each session pack starts on a new sheet.

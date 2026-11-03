@@ -5,6 +5,12 @@ export default defineRouter(() =>
     history: createWebHistory(),
     routes: [
       {
+        path: '/session/:tenantId/:eventId/:sessionId/:token',
+        name: 'public-session-runsheet',
+        meta: { public: true },
+        component: () => import('../pages/PublicRunsheetPage.vue'),
+      },
+      {
         path: '/runsheet/:tenantId/:eventId/:personId/:token',
         name: 'public-runsheet',
         meta: { public: true },

@@ -41,12 +41,14 @@ async function load() {
   error.value = '';
   try {
     const params = Object.fromEntries(
-      ['tenantId', 'eventId', 'personId', 'token'].map((key) => [
-        key,
-        String(route.params[key] ?? ''),
-      ]),
+      ['tenantId', 'eventId', route.params.personId ? 'personId' : 'sessionId', 'token'].map(
+        (key) => [key, String(route.params[key] ?? '')],
+      ),
     ) as unknown as RunsheetLink;
-    const result = await httpsCallable<RunsheetLink & { sessionId?: string }, PublicRunsheet>(
+    const result = await httpsCallable<
+      Omit<RunsheetLink, 'sessionId'> & { sessionId?: string },
+      PublicRunsheet
+    >(
       functions,
       'publicRunsheet',
     )({
@@ -58,7 +60,7 @@ async function load() {
     sessionId.value = result.data.sessionId ?? '';
     if (!result.data.views.some((v) => v.id === viewId.value))
       viewId.value = result.data.views[0]?.id ?? '';
-    document.title = `${result.data.person.name} · ${result.data.eventName} · Rundown`;
+    document.title = `${result.data.person?.name ?? result.data.sessions[0]?.name ?? 'Session runsheet'} · ${result.data.eventName} · Rundown`;
   } catch (e) {
     if (current !== requestId) return;
     error.value =
@@ -107,11 +109,14 @@ onUnmounted(() => {
       <template v-if="data">
         <div class="runsheet-intro">
           <p>{{ data.eventName }}</p>
-          <h1>{{ data.person.name }}</h1>
-          <p v-if="data.person.role" class="runsheet-role">{{ data.person.role }}</p>
+          <h1>{{ data.person?.name ?? session?.name ?? 'Session runsheet' }}</h1>
+          <p v-if="data.person?.role" class="runsheet-role">{{ data.person.role }}</p>
         </div>
-        <div v-if="data.sessions.length" class="runsheet-controls">
-          <label for="runsheet-session"
+        <div
+          v-if="(data.person && data.sessions.length) || data.views.length > 1"
+          class="runsheet-controls"
+        >
+          <label v-if="data.person && data.sessions.length" for="runsheet-session"
             >Session
             <select id="runsheet-session" v-model="sessionId" :disabled="loading" @change="load">
               <option v-for="s in data.sessions" :key="s.id" :value="s.id">
@@ -151,12 +156,14 @@ onUnmounted(() => {
         </div>
         <section v-else-if="session" class="runsheet-session" aria-labelledby="runsheet-title">
           <div class="runsheet-session-heading">
-            <h2 id="runsheet-title">{{ session.name }}</h2>
+            <h2 id="runsheet-title">
+              {{ data.person ? session.name : (view?.name ?? 'Runsheet') }}
+            </h2>
             <p>
               {{ sessionDate }} ·
               <span class="mono">{{ time(session.startAt, 0, data.timeZone, true) }}</span>
             </p>
-            <p v-if="view">{{ view.name }}</p>
+            <p v-if="view && data.person">{{ view.name }}</p>
           </div>
           <div v-if="view" class="runsheet-items" v-html="view.html"></div>
           <p v-else class="runsheet-state">

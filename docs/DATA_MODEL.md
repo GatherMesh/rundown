@@ -14,6 +14,7 @@ tenants/{tenantId}                              Tenant
       items/{itemId}                            Item
     printRecords/{hashOfPersonAndSession}        Last confirmed printed session snapshot
     runsheetLinks/{personId}                    Server-only public link token and creation audit
+    sessionRunsheetLinks/{sessionId}            Server-only generic session link token and audit
 users/{uid}                                     UserProfile { tenantIds[], lastTenantId }
 ```
 
@@ -139,6 +140,9 @@ read, list or write these documents, including tenant members. The authenticated
 callable requires owner/editor access and creates or returns the person's stable token. The
 unauthenticated `publicRunsheet` callable validates that token and renders only the current person's
 selected sessions and template content. It does not grant public Firestore or Storage rule access.
+Generic links store the same token/audit fields in `sessionRunsheetLinks` and pass `sessionId`
+instead of `personId` to the same callables. They expose one session's complete runsheet without
+recipient filtering; the token cannot be used for another session or a person-specific link.
 
 See `reference/firestore.rules`. Summary: a user can read a tenant's subtree iff
 `tenants/{t}/members/{uid}` exists; write iff role ∈ {owner, editor}; members writable by owner.

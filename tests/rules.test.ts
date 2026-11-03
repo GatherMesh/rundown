@@ -60,11 +60,15 @@ it('blocks unauthenticated and cross-tenant reads', async () => {
   );
 });
 it('keeps public runsheet tokens server-only, including for editors', async () => {
-  const path = 'tenants/a/events/event/runsheetLinks/person';
-  await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), path), { token: 'secret' }));
-  for (const context of [env.unauthenticatedContext(), env.authenticatedContext('editor')]) {
-    await assertFails(getDoc(doc(context.firestore(), path)));
-    await assertFails(setDoc(doc(context.firestore(), path), { token: 'replacement' }));
+  for (const collection of ['runsheetLinks', 'sessionRunsheetLinks']) {
+    const path = `tenants/a/events/event/${collection}/target`;
+    await env.withSecurityRulesDisabled((c) =>
+      setDoc(doc(c.firestore(), path), { token: 'secret' }),
+    );
+    for (const context of [env.unauthenticatedContext(), env.authenticatedContext('editor')]) {
+      await assertFails(getDoc(doc(context.firestore(), path)));
+      await assertFails(setDoc(doc(context.firestore(), path), { token: 'replacement' }));
+    }
   }
 });
 it('permits viewer reads but no edits', async () => {

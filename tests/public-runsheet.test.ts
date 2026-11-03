@@ -258,3 +258,62 @@ it('uses shared filters and safe cells, with full unpaginated scripts on mobile'
   p.template.filter.categoryIds = ['absent'];
   expect(renderRunsheet(p)).toContain('No items match this view.');
 });
+
+const genericScope = { tenantId: 'a', eventId: 'e', sessionId: 'morning' };
+it('creates a stable generic session link independently of people and templates', async () => {
+  m.docs.delete(personPath);
+  m.docs.delete(`${base}/templates/t`);
+  const link = await createRunsheetLink(request(genericScope, 'editor'));
+  expect(link).toMatchObject(genericScope);
+  expect(link).not.toHaveProperty('personId');
+  expect(link.token).not.toBe(token);
+  expect(await createRunsheetLink(request(genericScope, 'editor'))).toEqual(link);
+  expect(m.docs.get(`${event}/sessionRunsheetLinks/morning`)?.token).toBe(link.token);
+  const result = await getPublicRunsheet(request(link));
+  expect(result.person).toBeNull();
+  expect(result.sessions.map((s) => s.id)).toEqual(['morning']);
+  expect(result.views).toHaveLength(1);
+  const html = result.views[0].html;
+  expect(html.match(/class="print-item print-card /g)).toHaveLength(4);
+  for (const text of [
+    'Unshared item',
+    'morning item 0',
+    'Visible notes',
+    'Hidden script',
+    'Hidden audio',
+  ])
+    expect(html).toContain(text);
+  expect(html).not.toContain('recipient-row');
+  expect(JSON.stringify(result)).not.toContain('private-user-id');
+});
+it('limits generic tokens to one session and keeps person and session tokens separate', async () => {
+  const link = await createRunsheetLink(request(genericScope, 'editor'));
+  for (const data of [
+    { ...link, sessionId: 'afternoon' },
+    { ...link, eventId: 'other' },
+    { ...link, tenantId: 'other' },
+    { ...link, personId: 'p' },
+    { ...genericScope, token },
+    { ...link, token: '0'.repeat(48) },
+  ])
+    await expect(getPublicRunsheet(request(data))).rejects.toMatchObject({ code: 'not-found' });
+});
+it('requires editor membership and an existing session to create a generic link', async () => {
+  for (const uid of [undefined, 'viewer', 'outsider'])
+    await expect(createRunsheetLink(request(genericScope, uid))).rejects.toMatchObject({
+      code: uid ? 'permission-denied' : 'unauthenticated',
+    });
+  await expect(
+    createRunsheetLink(request({ ...genericScope, sessionId: '../invalid' }, 'editor')),
+  ).rejects.toMatchObject({ code: 'invalid-argument' });
+  await expect(
+    createRunsheetLink(request({ ...genericScope, sessionId: 'missing' }, 'editor')),
+  ).rejects.toMatchObject({ code: 'not-found' });
+});
+it('loads current session edits and stops serving deleted sessions through generic links', async () => {
+  const link = await createRunsheetLink(request(genericScope, 'editor'));
+  m.docs.get(`${event}/sessions/morning/items/i0`)!.title = 'Changed session item';
+  expect((await getPublicRunsheet(request(link))).views[0].html).toContain('Changed session item');
+  m.docs.delete(`${event}/sessions/morning`);
+  await expect(getPublicRunsheet(request(link))).rejects.toMatchObject({ code: 'not-found' });
+});
