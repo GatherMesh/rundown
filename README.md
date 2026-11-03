@@ -11,6 +11,7 @@ Firebase project: `gathermesh-rundown`, Sydney (`australia-southeast1`).
 - Realtime sessions with autosave, offline persistence, computed timing, drag reorder, quick-add, duplication, item deletion with undo, AV fields and slide uploads.
 - A4 portrait/landscape templates with configurable headers, fields, widths, text colours, filters and five item styles. Cards and Dense Cards use category-coloured left accents; live recipient previews use the same measured renderer as server PDFs.
 - Person-specific session selections and packs with ordered templates, copies, collating, covers, duplex settings, 2-up/4-up imposition, download and browser printing.
+- Public mobile runsheets: Copy Link for each person on Export, with session/view selection and the same template content in a continuous scroll.
 - Tenant membership rules with owner/editor/viewer permissions, image-upload restrictions and authenticated callable exports.
 
 ## Local development
@@ -52,6 +53,8 @@ npm run build
 
 If emulators are already running, run `npx vitest run tests/rules.test.ts` directly. Rules tests use test tenants `a` and `b` in the emulator. The export smoke test writes temporary PDFs into ignored `artifacts/`.
 
+With seeded emulators and the dev server running, `node scripts/smoke-public-runsheet.mjs` checks Copy Link (including clipboard denial), anonymous access, session/view selection, template filters, invalid links and layouts from 320–1280 px. It saves screenshots in `artifacts/` and uses installed Google Chrome on macOS (`CHROME_EXECUTABLE_PATH` overrides it).
+
 ## Deployment
 
 `app/.env.prod` contains the Firebase web app config and `VITE_USE_EMULATORS=false`. Quasar uses `.env.prod` for builds and `.env.local` for development. Keep these local files out of Git. Firebase web config values identify the project; authorization is enforced by Auth and security rules.
@@ -75,6 +78,13 @@ Google sign-in is configured in `firebase.json`; email-link sign-in is enabled i
 The production app starts with no organisation data. Sign in, create your organisation, and optionally include the sample event. Creating a new tenant creates its owner membership atomically. Role/member management is available through the authenticated API/MCP (`members_set` and `members_remove`); there is no separate member-management screen.
 
 ## Print behavior
+
+On **Export**, owners/editors can use **Copy Link** beside any person to share their mobile runsheet.
+Anyone with that link can view their currently selected sessions and templates without signing in.
+Links remain the same as content and pack selections change; open, change session or use **Refresh**
+to load saved updates. Each template appears once, with its fields, filters and recipient highlights;
+print copies, covers and page breaks are omitted. Empty packs show an empty state until configured.
+Deploy Hosting and the `shareRunsheet` / `publicRunsheet` Functions together to enable this feature.
 
 Individual session PDFs set the selected duplex viewer preference. Print all for person includes that person’s checked sessions; global Print All includes every enabled person’s checked sessions. Combined jobs always use two-sided, long-edge printing; single-sided recipients receive blank backs, and short-edge backs rotate 180°. Browser/printer settings can override PDF preferences, so the app displays the required setting before printing.
 

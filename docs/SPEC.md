@@ -113,6 +113,11 @@ Autosave on blur / 600 ms debounce. Realtime: other editors' changes appear live
   copy counts · selected session count · Scaling · total Sheets (computed) · Print all for person.
   The enable switch controls inclusion in global Print All; individual print actions remain available.
   Click a row to edit that person's pack in the side panel.
+- Each person has **Copy Link** (owners/editors): a stable public, password-free mobile runsheet.
+  Recipients select a checked session and template view, then scroll continuous content from the
+  shared renderer. Template fields, filters, context and recipient highlights match print. Copies,
+  sheets and PDF pagination do not apply. The link loads current saved content on opening,
+  changing sessions or Refresh, independently of the Print All enable switch.
 - **Side panel — pack settings for the selected person**
   - Duplicate config: choose another person in this event and replace their entire export
     configuration, including selected sessions and the Print All toggle. The recipient keeps

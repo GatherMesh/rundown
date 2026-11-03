@@ -3,7 +3,8 @@ import { computed, ref, watch, onUnmounted } from 'vue';
 import { httpsCallable } from 'firebase/functions';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { getBlob, ref as storageRef } from 'firebase/storage';
-import { Notify } from 'quasar';
+import { Notify, copyToClipboard } from 'quasar';
+import { useRouter } from 'vue-router';
 import { functions, db, storage } from '../boot/firebase';
 import { useWorkspace } from '../stores/workspace';
 import { payload } from '../render/payload';
@@ -12,6 +13,43 @@ import { computeItems, planPack } from '../render/domain';
 import { includesSession, selectPackJobs } from '../render/pack-selection';
 import { packRevision, requiresReprint, printDate, type PrintRecord } from '../render/reprints';
 import type { Item, PackSettings, Person, Session } from '../types';
+import type { RunsheetLink } from '../types/public-runsheet';
+const router = useRouter();
+const copyingLink = ref(''),
+  shareUrl = ref('');
+async function copyLink(p: Person) {
+  copyingLink.value = p.id;
+  const tenantId = w.tenantId,
+    eventId = w.eventId;
+  try {
+    await w.flush();
+    const result = await httpsCallable<Record<string, string>, RunsheetLink>(
+      functions,
+      'shareRunsheet',
+    )({
+      tenantId,
+      eventId,
+      personId: p.id,
+    });
+    const url = new URL(
+      router.resolve({ name: 'public-runsheet', params: { ...result.data } }).href,
+      location.origin,
+    ).href;
+    try {
+      await copyToClipboard(url);
+      Notify.create({ type: 'positive', message: `Runsheet link copied for ${p.name}.` });
+    } catch {
+      shareUrl.value = url;
+    }
+  } catch (e) {
+    Notify.create({
+      type: 'negative',
+      message: e instanceof Error ? e.message : 'Could not create the runsheet link. Try again.',
+    });
+  } finally {
+    copyingLink.value = '';
+  }
+}
 const w = useWorkspace(),
   selected = ref('margaret'),
   counts = ref<Record<string, Record<string, Record<string, number>>>>({}),
@@ -564,6 +602,17 @@ const initials = (p: Person) =>
                 <td>{{ p.pack.enabled ? (personTotals(p)?.sheets ?? '…') : '—' }}</td>
                 <td>
                   <q-btn
+                    flat
+                    no-caps
+                    dense
+                    icon="link"
+                    label="Copy Link"
+                    :aria-label="'Copy public runsheet link for ' + p.name"
+                    :loading="copyingLink === p.id"
+                    :disable="!w.canEdit || !!copyingLink"
+                    @click.stop="copyLink(p)"
+                  />
+                  <q-btn
                     outline
                     no-caps
                     dense
@@ -585,10 +634,34 @@ const initials = (p: Person) =>
         </div>
       </section>
       <p class="muted export-note">
+        Copy Link shares a mobile runsheet with anyone who has the link. No sign-in required.
+      </p>
+      <p class="muted export-note">
         Choose a person to select their sessions. Print All includes every enabled person’s selected
         sessions, grouped by person. Each session pack starts on a new sheet.
       </p>
     </main>
+    <q-dialog :model-value="!!shareUrl" @update:model-value="shareUrl = ''">
+      <q-card style="width: 520px; max-width: 90vw">
+        <q-card-section>
+          <h2>Public runsheet link</h2>
+          <p class="muted q-mt-sm">
+            Anyone with this link can view the runsheet. Select the link to copy it.
+          </p>
+          <q-input
+            :model-value="shareUrl"
+            outlined
+            readonly
+            class="q-mt-md"
+            aria-label="Public runsheet link"
+            @focus="($event.target as HTMLInputElement).select()"
+          />
+        </q-card-section>
+        <q-card-actions align="right"
+          ><q-btn flat no-caps label="Done" v-close-popup
+        /></q-card-actions>
+      </q-card>
+    </q-dialog>
     <aside v-if="person" class="detail-panel pack-panel">
       <div class="person-identity pack-person">
         <span class="person-avatar">{{ initials(person) }}</span>

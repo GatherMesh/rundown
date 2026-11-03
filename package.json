@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "npm run dev -w app",
     "build": "npm run build -w app && npm run build -w functions && npm run build -w mcp",
-    "test": "vitest run tests/domain.test.ts tests/duplicate-pack.test.ts tests/pack-selection.test.ts tests/assembly.test.ts tests/reprints.test.ts tests/api-contract.test.ts tests/mcp.test.ts tests/deletion.test.ts tests/delete-session.test.ts tests/organisation.test.ts",
+    "test": "vitest run tests/domain.test.ts tests/duplicate-pack.test.ts tests/pack-selection.test.ts tests/assembly.test.ts tests/reprints.test.ts tests/api-contract.test.ts tests/mcp.test.ts tests/deletion.test.ts tests/delete-session.test.ts tests/organisation.test.ts tests/public-runsheet.test.ts",
     "test:rules": "firebase emulators:exec --project demo-rundown --only firestore,storage 'vitest run tests/rules.test.ts'",
     "test:render": "npm run build -w app && node scripts/smoke-header.mjs && node scripts/smoke-colors.mjs",
     "emulators": "firebase emulators:start --project demo-rundown",

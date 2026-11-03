@@ -209,6 +209,19 @@ function block(p: RenderPayload, item: ComputedItem, continuation = false) {
     })
     .join('')}</article>`;
 }
+/** The same fields and filters as print, flowing as readable cards without page breaks. */
+export function renderRunsheet(p: RenderPayload): string {
+  const mobile = { ...p, template: { ...p.template, itemStyle: 'cards' as const } };
+  const visible = filterItems(p.items, p.template, p.recipient?.id ?? null);
+  return visible.length
+    ? visible
+        .map((item, index) => {
+          const gap = itemGapLabel(visible[index - 1], item);
+          return `${gap ? `<div class="print-gap">${escape(gap)}</div>` : ''}${block(mobile, item)}`;
+        })
+        .join('')
+    : '<p class="print-empty">No items match this view.</p>';
+}
 async function readyImages(root: HTMLElement) {
   await Promise.all(
     [...root.querySelectorAll('img')].map((img) =>

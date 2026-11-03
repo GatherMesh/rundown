@@ -47,7 +47,8 @@ function newOrg() {
 }
 </script>
 <template>
-  <div class="app-shell">
+  <router-view v-if="route.meta.public" />
+  <div v-else class="app-shell">
     <header class="topbar">
       <a class="brand" href="/sessions"
         ><span class="brand-mark"><i></i><i></i><i></i></span>Rundown</a

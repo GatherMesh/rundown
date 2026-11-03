@@ -13,6 +13,7 @@ tenants/{tenantId}                              Tenant
     sessions/{sessionId}                        Session
       items/{itemId}                            Item
     printRecords/{hashOfPersonAndSession}        Last confirmed printed session snapshot
+    runsheetLinks/{personId}                    Server-only public link token and creation audit
 users/{uid}                                     UserProfile { tenantIds[], lastTenantId }
 ```
 
@@ -132,6 +133,12 @@ No composite indexes are required for v1; keep `firestore.indexes.json` empty bu
 - Categories and templates can't be deleted while referenced; offer archive instead.
 
 ## Security
+
+`runsheetLinks` stores `{ token: 48-character random hex, createdBy, createdAt }`. Clients cannot
+read, list or write these documents, including tenant members. The authenticated `shareRunsheet`
+callable requires owner/editor access and creates or returns the person's stable token. The
+unauthenticated `publicRunsheet` callable validates that token and renders only the current person's
+selected sessions and template content. It does not grant public Firestore or Storage rule access.
 
 See `reference/firestore.rules`. Summary: a user can read a tenant's subtree iff
 `tenants/{t}/members/{uid}` exists; write iff role ∈ {owner, editor}; members writable by owner.

@@ -4,6 +4,7 @@ import { setGlobalOptions } from 'firebase-functions/v2/options';
 import { exportPacks, confirmPrinted } from './export';
 import { apiHandler } from './api-http';
 import { deleteSessionData } from './delete-session';
+import { createRunsheetLink, getPublicRunsheet } from './public-runsheet';
 initializeApp();
 setGlobalOptions({
   region: 'australia-southeast1',
@@ -13,6 +14,14 @@ setGlobalOptions({
   concurrency: 1,
 });
 export const deleteSession = onCall(deleteSessionData);
+export const shareRunsheet = onCall(
+  { memory: '256MiB', timeoutSeconds: 60 },
+  createRunsheetLink,
+);
+export const publicRunsheet = onCall(
+  { memory: '256MiB', timeoutSeconds: 60, concurrency: 40 },
+  getPublicRunsheet,
+);
 export const confirmPrint = onCall((request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to confirm printing.');
   return confirmPrinted(request.auth.uid, request.data ?? {});
