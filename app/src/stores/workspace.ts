@@ -520,9 +520,9 @@ export const useWorkspace = defineStore('workspace', () => {
   async function saveEvent(data: Partial<Event>) {
     await updateDoc(doc(db, eventPath()), data);
   }
-  async function addPerson(name: string, role = '') {
+  async function addPerson(name: string, role = '', email = '') {
     const ref = doc(collection(db, `${eventPath()}/people`));
-    await setDoc(ref, { name: name.trim(), role, pack: defaultPack() });
+    await setDoc(ref, { name: name.trim(), role, ...(email && { email }), pack: defaultPack() });
     return ref.id;
   }
   async function removePerson(id: string, removeAssignments = false) {

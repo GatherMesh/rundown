@@ -3,6 +3,7 @@ node_modules/
 dist/
 functions/lib/
 functions/print/
+.secret.local
 .env*
 !.env.example
 !**/.env.example

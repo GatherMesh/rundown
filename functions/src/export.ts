@@ -326,6 +326,9 @@ export async function exportPacks(uid: string, input: Record<string, unknown>, a
       path,
       completedAt: new Date(),
       eventId,
+      ...(personId && !sessionId
+        ? { fullPackPersonId: personId, personName: recipients[0].name, eventName: event.name }
+        : {}),
       revisions: revisions.filter((r) =>
         jobs.some((j) => j.person.id === r.personId && j.session.id === r.sessionId),
       ),

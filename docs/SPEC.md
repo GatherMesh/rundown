@@ -149,6 +149,12 @@ Existing packs without session IDs include all sessions; new packs start with no
 Event-scoped list: name, role, email (optional), initials override, items count in the selected
 session. Add / edit / delete (block delete if on items; offer "remove from items").
 
+Owners and editors can email a person from their row or select several people in **Email packs**.
+Select all includes people with a valid email and a configured pack. Each receives their own full
+multi-session PDF, with per-recipient status and retry for unsuccessful sends.
+The styled email also includes the person's existing stable digital runsheet link, with no login
+required; the PDF is a snapshot, while the digital view shows current saved changes.
+
 ### 4.5 Categories page (not designed)
 
 Tenant-wide list with name, colour (pick from the 7 pill palettes in `DESIGN.md`, plus custom),

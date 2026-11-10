@@ -55,6 +55,8 @@ If emulators are already running, run `npx vitest run tests/rules.test.ts` direc
 
 With seeded emulators and the dev server running, `node scripts/smoke-public-runsheet.mjs` checks Copy Link (including clipboard denial), anonymous access, session/view selection, template filters, invalid links and layouts from 320–1280 px. It saves screenshots in `artifacts/` and uses installed Google Chrome on macOS (`CHROME_EXECUTABLE_PATH` overrides it).
 
+`node scripts/smoke-email.mjs` checks email entry, eligible recipients, PDF rendering, partial-send failure and retry, and the responsive email template. It intercepts mail requests so no email is sent; run it after seeding the emulators.
+
 ## Deployment
 
 `app/.env.prod` contains the Firebase web app config and `VITE_USE_EMULATORS=false`. Quasar uses `.env.prod` for builds and `.env.local` for development. Keep these local files out of Git. Firebase web config values identify the project; authorization is enforced by Auth and security rules.
@@ -76,6 +78,20 @@ Storage rules check tenant membership in Firestore. Provision the required servi
 Google sign-in is configured in `firebase.json`; email-link sign-in is enabled in the Firebase project. `scripts/cloud-setup.mjs` records the provisioning calls, using an existing authenticated Firebase CLI session in memory. It never stores access tokens. The Storage bucket CORS allowlist permits the two Firebase Hosting domains and localhost:9000.
 
 The production app starts with no organisation data. Sign in, create your organisation, and optionally include the sample event. Creating a new tenant creates its owner membership atomically. Role/member management is available through the authenticated API/MCP (`members_set` and `members_remove`); there is no separate member-management screen.
+
+## Email session packs
+
+In **People**, enter an email address and use the envelope beside a person or **Email packs** to choose several people. **Select all eligible people** selects those with an address and a configured pack. Each styled email attaches one PDF containing that person's checked sessions and templates, including their configured copies and cover. It also includes the same stable digital runsheet link available in Export, showing current saved content without a login. The dialog shows progress and keeps failed recipients selected for retry. Keep it open until sending finishes.
+
+To enable delivery for an organisation:
+
+1. Verify a sending domain in Resend and create a sending API key. [Resend setup](https://resend.com/docs/send-with-nodejs)
+2. Run `firebase functions:secrets:set RESEND_API_KEY --project <project-id>` and enter the key at the prompt.
+3. In `functions/.env.<project-id>`, set `PACK_EMAIL_FROM` to the verified sender address and `PACK_EMAIL_TENANTS` to the comma-separated Firestore tenant IDs allowed to use that sender.
+   The digital link defaults to `https://<project-id>.web.app`; set `PACK_EMAIL_APP_URL` to use a custom HTTPS app origin.
+4. Deploy Hosting and Functions together. The callable requires owner or editor access to the selected tenant.
+
+For the Functions emulator, use `functions/.secret.local` for the test key and `functions/.env.local` for the sender and tenant IDs. A configured emulator calls the mail provider. Each attachment can be up to 25 MB before encoding.
 
 ## Print behavior
 

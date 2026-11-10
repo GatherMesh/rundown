@@ -3,6 +3,7 @@ import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
 import { setGlobalOptions } from 'firebase-functions/v2/options';
 import { exportPacks, confirmPrinted } from './export';
 import { apiHandler } from './api-http';
+import { sendPackEmail, resendKey } from './email-pack';
 import { deleteSessionData } from './delete-session';
 import { createRunsheetLink, getPublicRunsheet } from './public-runsheet';
 initializeApp();
@@ -14,13 +15,14 @@ setGlobalOptions({
   concurrency: 1,
 });
 export const deleteSession = onCall(deleteSessionData);
-export const shareRunsheet = onCall(
-  { memory: '256MiB', timeoutSeconds: 60 },
-  createRunsheetLink,
-);
+export const shareRunsheet = onCall({ memory: '256MiB', timeoutSeconds: 60 }, createRunsheetLink);
 export const publicRunsheet = onCall(
   { memory: '256MiB', timeoutSeconds: 60, concurrency: 40 },
   getPublicRunsheet,
+);
+export const emailPack = onCall(
+  { secrets: [resendKey], memory: '512MiB', timeoutSeconds: 120 },
+  sendPackEmail,
 );
 export const confirmPrint = onCall((request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to confirm printing.');

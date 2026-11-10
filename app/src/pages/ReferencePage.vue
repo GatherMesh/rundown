@@ -2,19 +2,47 @@
 import { ref } from 'vue';
 import { Dialog } from 'quasar';
 import { useWorkspace } from '../stores/workspace';
+import EmailPacks from '../components/EmailPacks.vue';
+import { validPersonEmail } from '../types/person-email';
 import EventPicker from '../components/EventPicker.vue';
 const props = defineProps<{ kind: string }>(),
   w = useWorkspace(),
-  drag = ref('');
+  drag = ref(''),
+  adding = ref(false),
+  saving = ref(false),
+  newName = ref(''),
+  newEmail = ref(''),
+  emailPacks = ref<InstanceType<typeof EmailPacks>>();
 function add() {
+  if (props.kind === 'people') {
+    newName.value = '';
+    newEmail.value = '';
+    adding.value = true;
+    return;
+  }
   Dialog.create({
-    title: props.kind === 'people' ? 'Add person' : 'Add category',
+    title: 'Add category',
     prompt: { model: '', label: 'Name', isValid: (v) => v.trim().length > 0 },
     cancel: true,
-  }).onOk(
-    (name: string) =>
-      void (props.kind === 'people' ? w.addPerson(name) : w.addCategory(name)).catch(w.fail),
-  );
+  }).onOk((name: string) => void w.addCategory(name).catch(w.fail));
+}
+async function createPerson() {
+  if (
+    saving.value ||
+    !w.canEdit ||
+    !newName.value.trim() ||
+    (newEmail.value.trim() && !validPersonEmail(newEmail.value))
+  )
+    return;
+  saving.value = true;
+  try {
+    await w.addPerson(newName.value, '', newEmail.value.trim());
+    adding.value = false;
+  } catch (error) {
+    w.fail(error);
+  } finally {
+    saving.value = false;
+  }
 }
 function removePerson(id: string) {
   Dialog.create({
@@ -56,14 +84,21 @@ function reorder(id: string) {
           <h1>{{ kind === 'people' ? 'People' : 'Categories' }}</h1>
           <p class="muted">{{ kind === 'people' ? w.event?.name : w.tenant?.name }}</p>
         </div>
-        <q-btn
-          color="primary"
-          no-caps
-          icon="add"
-          :label="kind === 'people' ? 'Add person' : 'Add category'"
-          :disable="!w.canEdit || (kind === 'people' && !w.event)"
-          @click="add"
-        />
+        <div class="button-row">
+          <EmailPacks
+            v-if="kind === 'people'"
+            ref="emailPacks"
+            :key="JSON.stringify([w.tenantId, w.eventId])"
+          />
+          <q-btn
+            color="primary"
+            no-caps
+            icon="add"
+            :label="kind === 'people' ? 'Add person' : 'Add category'"
+            :disable="!w.canEdit || (kind === 'people' && !w.event)"
+            @click="add"
+          />
+        </div>
       </div>
       <section class="card">
         <div class="table-scroll">
@@ -102,10 +137,16 @@ function reorder(id: string) {
                   <q-input
                     :model-value="p.email || ''"
                     type="email"
+                    :aria-label="'Email address for ' + p.name"
+                    :error="!!p.email && !validPersonEmail(p.email)"
+                    error-message="Enter a valid email address"
+                    hide-bottom-space
                     outlined
                     dense
                     :readonly="!w.canEdit"
-                    @update:model-value="(v) => w.patchPerson(p.id, { email: String(v ?? '') })"
+                    @update:model-value="
+                      (v) => w.patchPerson(p.id, { email: String(v ?? '').trim() })
+                    "
                   />
                 </td>
                 <td>
@@ -121,6 +162,14 @@ function reorder(id: string) {
                 </td>
                 <td>{{ w.items.filter((i) => i.personIds.includes(p.id)).length }}</td>
                 <td>
+                  <q-btn
+                    flat
+                    round
+                    icon="mail_outline"
+                    :disable="!w.canEdit"
+                    :aria-label="'Email pack to ' + p.name"
+                    @click="emailPacks?.open(p.id)"
+                  />
                   <q-btn
                     flat
                     round
@@ -218,4 +267,37 @@ function reorder(id: string) {
       </section>
     </main>
   </div>
+  <q-dialog v-model="adding" :persistent="saving">
+    <q-card class="dialog-card">
+      <q-form @submit="createPerson">
+        <q-card-section class="q-gutter-sm">
+          <h2>Add person</h2>
+          <q-input v-model="newName" label="Name" outlined dense autofocus maxlength="300" />
+          <q-input
+            v-model="newEmail"
+            label="Email address (optional)"
+            type="email"
+            outlined
+            dense
+            :rules="[
+              (value) => !value.trim() || validPersonEmail(value) || 'Enter a valid email address',
+            ]"
+            lazy-rules
+            hide-bottom-space
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat no-caps label="Cancel" :disable="saving" v-close-popup />
+          <q-btn
+            type="submit"
+            color="primary"
+            no-caps
+            label="Add person"
+            :loading="saving"
+            :disable="!w.canEdit || !newName.trim()"
+          />
+        </q-card-actions>
+      </q-form>
+    </q-card>
+  </q-dialog>
 </template>
