@@ -13,7 +13,9 @@ const w = useWorkspace(),
   busy = ref(false),
   selected = ref<string[]>([]);
 const subject = ref(`Your rundowns for ${w.event?.name ?? 'your event'}`.slice(0, 200)),
-  message = ref('');
+  message = ref(
+    'At the event, you will also be supplied with (or can request) hard copies of these rundowns. If you have any questions, please reply to this email.',
+  );
 const validSubject = computed(
   () => !!subject.value.trim() && subject.value.length <= 200 && !/[\r\n]/.test(subject.value),
 );
