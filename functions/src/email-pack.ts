@@ -16,14 +16,25 @@ const selection = z.strictObject({
   personId: id,
   jobId: id,
   email: z.email(),
+  subject: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .regex(/^[^\r\n]+$/)
+    .optional(),
+  message: z.string().trim().max(5000).optional(),
 });
 
 export async function sendPackEmail(request: CallableRequest) {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to email session packs.');
   const input = selection.safeParse(request.data);
   if (!input.success)
-    throw new HttpsError('invalid-argument', 'Choose a person with a valid email address.');
-  const { tenantId, eventId, personId, jobId, email } = input.data;
+    throw new HttpsError(
+      'invalid-argument',
+      'Check the email address, subject (up to 200 characters) and message (up to 5,000 characters).',
+    );
+  const { tenantId, eventId, personId, jobId, email, subject, message: blurb } = input.data;
   const db = getFirestore(),
     uid = request.auth.uid;
   await authorize(db, uid, tenantId, 'edit');
@@ -81,7 +92,10 @@ export async function sendPackEmail(request: CallableRequest) {
   if (!appUrl || !/^https:\/\//.test(appUrl))
     throw new HttpsError('failed-precondition', 'The digital runsheet address is not configured.');
   const url = new URL(`/runsheet/${tenantId}/${eventId}/${personId}/${link.token}`, appUrl).href;
-  const message = packEmailMessage(job.personName ?? person.name, job.eventName, url);
+  const message = packEmailMessage(job.personName ?? person.name, job.eventName, url, {
+    subject,
+    message: blurb,
+  });
   let response: Response;
   try {
     response = await fetch('https://api.resend.com/emails', {

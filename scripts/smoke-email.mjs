@@ -25,6 +25,11 @@ try {
       'Rev. Margaret Hill',
       'Easter Convention 2027',
       'https://gathermesh-rundown.web.app/runsheet/preview/event/person/' + 'a'.repeat(48),
+      {
+        subject: 'Your Saturday team briefing',
+        message:
+          'Thanks for being part of the team.\nPlease arrive 30 minutes before your session for a quick briefing.',
+      },
     ).html,
   );
   const page = await browser.newPage();
@@ -55,7 +60,7 @@ try {
     const data = JSON.parse(request.postData()).data;
     sends.push(data);
     const fail =
-      data.personId === 'priya' && sends.filter((s) => s.personId === 'priya').length === 1;
+      data.personId === 'priya' && sends.filter((s) => s.personId === 'priya').length <= 2;
     return request.respond({
       status: fail ? 503 : 200,
       headers,
@@ -85,6 +90,25 @@ try {
   }
   await page.locator('button ::-p-text(Email packs)').click();
   await page.waitForSelector('.email-packs');
+  await settle();
+  const subjectInput = '.email-packs input[aria-label="Subject"]';
+  const messageInput = '.email-packs textarea[aria-label="Message (optional)"]';
+  async function fillEmailField(selector, value) {
+    await page.focus(selector);
+    await page.$eval(selector, (el) => el.select());
+    await page.keyboard.press('Backspace');
+    await page.type(selector, value);
+    assert.equal(await page.$eval(selector, (el) => el.value), value);
+  }
+  assert.equal(
+    await page.$eval(subjectInput, (el) => el.value),
+    'Your rundowns for Easter Convention 2027',
+  );
+  await fillEmailField(subjectInput, 'Your Saturday team briefing');
+  await fillEmailField(
+    messageInput,
+    'Thanks for being part of the team.\nPlease arrive 30 minutes before your session for a quick briefing.',
+  );
   await page.evaluate(() =>
     Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))),
   );
@@ -119,12 +143,22 @@ try {
   );
   await settle();
   await page.screenshot({ path: 'artifacts/email-recipients-retry.png' });
+  const retried = page.waitForResponse((r) => r.url().endsWith('/emailPack') && r.status() === 503);
+  await page.locator('button ::-p-text(Send emails (1))').click();
+  await retried;
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('.email-packs button')].some(
+      (b) => b.textContent.includes('Send emails (1)') && !b.disabled,
+    ),
+  );
+  await fillEmailField(subjectInput, 'Updated Saturday team briefing');
+  await fillEmailField(messageInput, 'Please arrive at 6 pm.\nBring your notes.');
   await page.locator('button ::-p-text(Send emails (1))').click();
   await page.waitForFunction(
     () => document.querySelector('.email-packs').textContent.includes('Send emails (0)'),
     { timeout: 120000 },
   );
-  assert.deepEqual(sends.map((s) => s.personId).sort(), ['margaret', 'priya', 'priya']);
+  assert.deepEqual(sends.map((s) => s.personId).sort(), ['margaret', 'priya', 'priya', 'priya']);
   const priyaSends = sends.filter((s) => s.personId === 'priya');
   assert.equal(
     priyaSends[0].jobId,
@@ -132,6 +166,15 @@ try {
     'retry reuses the rendered pack and idempotency key',
   );
   assert.equal(priyaSends[0].email, 'priya@example.com');
+  assert.notEqual(
+    priyaSends[1].jobId,
+    priyaSends[2].jobId,
+    'editing content creates a new send instead of reusing an old idempotency key',
+  );
+  assert.equal(priyaSends[0].subject, 'Your Saturday team briefing');
+  assert.equal(priyaSends[1].message, priyaSends[0].message);
+  assert.equal(priyaSends[2].subject, 'Updated Saturday team briefing');
+  assert.equal(priyaSends[2].message, 'Please arrive at 6 pm.\nBring your notes.');
   assert.equal(sends.find((s) => s.personId === 'margaret').email, 'margaret@example.com');
   assert.deepEqual(errors, []);
   await page.locator('.email-packs button ::-p-text(Close)').click();

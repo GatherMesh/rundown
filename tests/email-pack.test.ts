@@ -116,6 +116,36 @@ it('keeps an unconfirmed network submission retryable', async () => {
   expect(m.update).not.toHaveBeenCalled();
   await expect(sendPackEmail(request)).resolves.toEqual({ sent: true });
 });
+it('sends the custom subject and multiline message safely in both email versions', async () => {
+  const subject = ' Saturday team briefing ',
+    message = 'Please arrive at 6 pm.\nBring <scripts> & notes.';
+  await sendPackEmail({ ...request, data: { ...request.data, subject, message } });
+  const body = JSON.parse(m.fetch.mock.calls[0][1].body);
+  expect(body.subject).toBe('Saturday team briefing');
+  expect(body.text).toContain(message);
+  expect(body.html).toContain('Please arrive at 6 pm.<br>Bring &lt;scripts&gt; &amp; notes.');
+  expect(body.html).not.toContain('<scripts>');
+  expect(body.attachments).toHaveLength(1);
+  expect(body.html).toContain('View digital rundowns');
+});
+it.each([
+  { subject: '' },
+  { subject: '  ' },
+  { subject: 'a'.repeat(201) },
+  { subject: 'Briefing\r\nBcc: somebody@example.com' },
+  { message: 'a'.repeat(5001) },
+  { message: { html: '<p>message</p>' } },
+])('rejects invalid custom email content %o before sending', async (content) => {
+  await expect(
+    sendPackEmail({ ...request, data: { ...request.data, ...content } }),
+  ).rejects.toMatchObject({ code: 'invalid-argument' });
+  expect(m.fetch).not.toHaveBeenCalled();
+});
+it('omits an empty message and keeps the default subject for existing clients', () => {
+  expect(packEmailMessage('Alex', 'Event', 'https://example.com', { message: '  \n ' })).toEqual(
+    packEmailMessage('Alex', 'Event', 'https://example.com'),
+  );
+});
 it.each([
   { fullPackPersonId: undefined },
   { fullPackPersonId: 'other' },

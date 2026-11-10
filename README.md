@@ -83,6 +83,8 @@ The production app starts with no organisation data. Sign in, create your organi
 
 In **People**, enter an email address and use the envelope beside a person or **Email packs** to choose several people. **Select all eligible people** selects those with an address and a configured pack. Each styled email attaches one PDF containing that person's checked sessions and templates, including their configured copies and cover. It also includes the same stable digital runsheet link available in Export, showing current saved content without a login. The dialog shows progress and keeps failed recipients selected for retry. Keep it open until sending finishes.
 
+Edit the **Subject** and optional **Message** before sending. The message appears after the greeting, with line breaks preserved, in every selected person's email. The subject is limited to 200 characters and the message to 5,000. Unchanged retries reuse the same send; editing the content prepares a fresh send for the remaining recipients.
+
 To enable delivery for an organisation:
 
 1. Verify a sending domain in Resend and create a sending API key. [Resend setup](https://resend.com/docs/send-with-nodejs)

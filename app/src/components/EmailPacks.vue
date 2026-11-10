@@ -13,8 +13,16 @@ const w = useWorkspace(),
   busy = ref(false);
 const selected = ref<string[]>([]),
   results = ref<Record<string, string>>({}),
-  progress = ref('');
-const retries = new Map<string, { email: string; jobId: string }>();
+  progress = ref(''),
+  subject = ref(''),
+  message = ref('');
+const validSubject = computed(
+  () => !!subject.value.trim() && subject.value.length <= 200 && !/[\r\n]/.test(subject.value),
+);
+const retries = new Map<
+  string,
+  { email: string; jobId: string; subject: string; message: string }
+>();
 let active = true;
 onBeforeUnmount(() => {
   active = false;
@@ -36,13 +44,23 @@ function open(personId?: string) {
   results.value = {};
   selected.value = personId && eligible.value.some((p) => p.id === personId) ? [personId] : [];
   progress.value = '';
+  if (!subject.value)
+    subject.value = `Your rundowns for ${w.event?.name ?? 'your event'}`.slice(0, 200);
   dialog.value = true;
 }
 defineExpose({ open });
 const render = httpsCallable(functions, 'renderPack', { timeout: 300000 });
 const send = httpsCallable(functions, 'emailPack');
 async function sendSelected() {
-  if (busy.value || !w.canEdit || !recipients.value.length) return;
+  if (
+    busy.value ||
+    !w.canEdit ||
+    !recipients.value.length ||
+    !validSubject.value ||
+    message.value.length > 5000
+  )
+    return;
+  const content = { subject: subject.value.trim(), message: message.value.trim() };
   const batch = recipients.value.map((p) => ({
     personId: p.id,
     name: p.name,
@@ -61,10 +79,15 @@ async function sendSelected() {
       progress.value = `Sending ${i + 1} of ${batch.length} · ${name}`;
       try {
         let saved = retries.get(personId);
-        if (!saved || saved.email !== email) {
+        if (
+          !saved ||
+          saved.email !== email ||
+          saved.subject !== content.subject ||
+          saved.message !== content.message
+        ) {
           const jobId = crypto.randomUUID();
           await render({ ...scope, personId, jobId });
-          saved = { jobId, email };
+          saved = { jobId, email, ...content };
           retries.set(personId, saved);
         }
         if (!active || !w.canEdit || scope.tenantId !== w.tenantId || scope.eventId !== w.eventId)
@@ -113,6 +136,30 @@ async function sendSelected() {
             </p>
           </div>
         </div>
+        <q-input
+          v-model="subject"
+          class="q-mt-md"
+          label="Subject"
+          outlined
+          dense
+          maxlength="200"
+          :disable="busy"
+          :rules="[() => validSubject || 'Enter a subject of up to 200 characters on one line']"
+          lazy-rules
+          hide-bottom-space
+        />
+        <q-input
+          v-model="message"
+          class="q-mt-md"
+          label="Message (optional)"
+          type="textarea"
+          outlined
+          dense
+          rows="3"
+          maxlength="5000"
+          :disable="busy"
+          hint="Included in every selected person's email."
+        />
       </q-card-section>
       <q-card-section class="email-recipients">
         <q-checkbox
@@ -163,7 +210,7 @@ async function sendSelected() {
           icon="send"
           :label="'Send emails (' + recipients.length + ')'"
           :loading="busy"
-          :disable="!w.canEdit || !recipients.length"
+          :disable="!w.canEdit || !recipients.length || !validSubject || message.length > 5000"
           @click="sendSelected"
         />
       </q-card-actions>
