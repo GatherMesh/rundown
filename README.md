@@ -55,7 +55,13 @@ If emulators are already running, run `npx vitest run tests/rules.test.ts` direc
 
 With seeded emulators and the dev server running, `node scripts/smoke-public-runsheet.mjs` checks Copy Link (including clipboard denial), anonymous access, session/view selection, template filters, invalid links and layouts from 320–1280 px. It saves screenshots in `artifacts/` and uses installed Google Chrome on macOS (`CHROME_EXECUTABLE_PATH` overrides it).
 
-`node scripts/smoke-email.mjs` checks email entry, eligible recipients, PDF rendering, partial-send failure and retry, and the responsive email template. It intercepts mail requests so no email is sent; run it after seeding the emulators.
+For the queued-email smoke test, add emulator-only settings to `functions/.env.local` (`PACK_EMAIL_FROM="Rundown <admin@mtcc.org.au>"`, `PACK_EMAIL_TENANTS=qcec`, `PACK_EMAIL_APP_URL=https://gathermesh-rundown.web.app`) and a dummy `RESEND_API_KEY` in `functions/.secret.local`. Start the emulators with `NODE_OPTIONS="--require=$(pwd)/scripts/mock-resend.cjs" npm run emulators`, seed them, and run:
+
+```sh
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 STORAGE_EMULATOR_HOST=http://127.0.0.1:9199 node scripts/smoke-email.mjs
+```
+
+The provider stub accepts only seeded test addresses and never sends mail. The smoke test exercises real queue callables, the Firestore worker, PDF generation, background completion after navigation, persistent history after reload, partial failure/retry, and blank-free attachments. It saves screenshots and one attachment in ignored `artifacts/`.
 
 ## Deployment
 
@@ -81,9 +87,11 @@ The production app starts with no organisation data. Sign in, create your organi
 
 ## Email session packs
 
-In **People**, enter an email address and use the envelope beside a person or **Email packs** to choose several people. **Select all eligible people** selects those with an address and a configured pack. Each styled email attaches one PDF containing that person's checked sessions and templates, including their configured copies and cover. It also includes the same stable digital runsheet link available in Export, showing current saved content without a login. The dialog shows progress and keeps failed recipients selected for retry. Keep it open until sending finishes.
+Add email addresses in **People**, then open the **Email** page. **Compose** provides an editable subject, optional message, and recipient selection. **Queue emails** stores one job per person and returns immediately; rendering and sending continue on the server after you leave the page. **Queue** shows the latest 100 jobs for the selected event, with live Queued, Preparing PDF, Sending, Sent, and Failed statuses. Owners/editors can retry failed jobs; recipients already sent are untouched.
 
-Edit the **Subject** and optional **Message** before sending. The message appears after the greeting, with line breaks preserved, in every selected person's email. The subject is limited to 200 characters and the message to 5,000. Unchanged retries reuse the same send; editing the content prepares a fresh send for the remaining recipients.
+Each styled email attaches one PDF containing that person's checked sessions and templates, including configured copies and cover. Blank print-padding pages and printer-only short-edge rotations are removed from the attachment. Print/export PDFs retain their existing sheet layout. Emails reuse the existing stable digital runsheet link and show saved content without login.
+
+The subject is limited to 200 characters and the message to 5,000. The plain-text message appears after the greeting with line breaks preserved. Queue jobs retain their original address, subject and message. A retry reuses any completed PDF and its send key to avoid duplicate delivery. For changed content, compose a new email. Expired safe retry windows require a new composition.
 
 To enable delivery for an organisation:
 
@@ -91,7 +99,7 @@ To enable delivery for an organisation:
 2. Run `firebase functions:secrets:set RESEND_API_KEY --project <project-id>` and enter the key at the prompt.
 3. In `functions/.env.<project-id>`, set `PACK_EMAIL_FROM` to the verified sender address and `PACK_EMAIL_TENANTS` to the comma-separated Firestore tenant IDs allowed to use that sender.
    The digital link defaults to `https://<project-id>.web.app`; set `PACK_EMAIL_APP_URL` to use a custom HTTPS app origin.
-4. Deploy Hosting and Functions together. The callable requires owner or editor access to the selected tenant.
+4. Deploy Hosting, Firestore rules, and Functions together, including `queueEmails`, `retryEmailJob`, and the `processEmailJob` Firestore worker. The callables require owner/editor access; queue records are server-writable only. The worker binds `RESEND_API_KEY` and uses the existing PDF renderer.
 
 For the Functions emulator, use `functions/.secret.local` for the test key and `functions/.env.local` for the sender and tenant IDs. A configured emulator calls the mail provider. Each attachment can be up to 25 MB before encoding.
 

@@ -20,7 +20,7 @@ const busy = ref(false),
   email = ref(''),
   orgName = ref(''),
   sample = ref(true);
-const nav = ['Sessions', 'Templates', 'Export', 'People', 'Categories', 'Organisation'];
+const nav = ['Sessions', 'Templates', 'Export', 'Email', 'People', 'Categories', 'Organisation'];
 async function run(fn: () => Promise<unknown>) {
   busy.value = true;
   try {

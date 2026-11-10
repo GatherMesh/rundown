@@ -2,7 +2,6 @@
 import { ref } from 'vue';
 import { Dialog } from 'quasar';
 import { useWorkspace } from '../stores/workspace';
-import EmailPacks from '../components/EmailPacks.vue';
 import { validPersonEmail } from '../types/person-email';
 import EventPicker from '../components/EventPicker.vue';
 const props = defineProps<{ kind: string }>(),
@@ -11,8 +10,7 @@ const props = defineProps<{ kind: string }>(),
   adding = ref(false),
   saving = ref(false),
   newName = ref(''),
-  newEmail = ref(''),
-  emailPacks = ref<InstanceType<typeof EmailPacks>>();
+  newEmail = ref('');
 function add() {
   if (props.kind === 'people') {
     newName.value = '';
@@ -85,11 +83,6 @@ function reorder(id: string) {
           <p class="muted">{{ kind === 'people' ? w.event?.name : w.tenant?.name }}</p>
         </div>
         <div class="button-row">
-          <EmailPacks
-            v-if="kind === 'people'"
-            ref="emailPacks"
-            :key="JSON.stringify([w.tenantId, w.eventId])"
-          />
           <q-btn
             color="primary"
             no-caps
@@ -162,14 +155,6 @@ function reorder(id: string) {
                 </td>
                 <td>{{ w.items.filter((i) => i.personIds.includes(p.id)).length }}</td>
                 <td>
-                  <q-btn
-                    flat
-                    round
-                    icon="mail_outline"
-                    :disable="!w.canEdit"
-                    :aria-label="'Email pack to ' + p.name"
-                    @click="emailPacks?.open(p.id)"
-                  />
                   <q-btn
                     flat
                     round

@@ -59,6 +59,25 @@ it('blocks unauthenticated and cross-tenant reads', async () => {
     getDoc(doc(env.authenticatedContext('outsider').firestore(), 'tenants/a/events/event')),
   );
 });
+it('allows tenant members to read the email queue, with all job writes reserved for the server', async () => {
+  const path = 'tenants/a/events/event/emailJobs/job';
+  await env.withSecurityRulesDisabled((c) =>
+    setDoc(doc(c.firestore(), path), { status: 'queued', email: 'person@example.com' }),
+  );
+  for (const uid of ['owner', 'editor', 'viewer']) {
+    const ref = doc(env.authenticatedContext(uid).firestore(), path);
+    await assertSucceeds(getDoc(ref));
+    await assertFails(updateDoc(ref, { status: 'sent' }));
+    await assertFails(deleteDoc(ref));
+    await assertFails(
+      setDoc(doc(env.authenticatedContext(uid).firestore(), path + '-forged'), {
+        status: 'queued',
+      }),
+    );
+  }
+  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), path)));
+  await assertFails(getDoc(doc(env.authenticatedContext('outsider').firestore(), path)));
+});
 it('keeps public runsheet tokens server-only, including for editors', async () => {
   for (const collection of ['runsheetLinks', 'sessionRunsheetLinks']) {
     const path = `tenants/a/events/event/${collection}/target`;

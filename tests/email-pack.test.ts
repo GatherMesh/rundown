@@ -3,6 +3,7 @@ import type { CallableRequest } from 'firebase-functions/v2/https';
 import { sendPackEmail } from '../functions/src/email-pack';
 import { validPersonEmail } from '../app/src/types/person-email';
 import { packEmailMessage } from '../functions/src/pack-email-template';
+import { PDFDocument } from 'pdf-lib';
 
 const m = vi.hoisted(() => ({
   member: vi.fn(),
@@ -44,7 +45,7 @@ function documents(overrides = {}, email = request.data.email) {
     { data: () => ({ email }) },
   ]);
 }
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetAllMocks();
   vi.stubEnv('PACK_EMAIL_FROM', 'sender@example.com');
   vi.stubEnv('PACK_EMAIL_TENANTS', 'a,b');
@@ -53,9 +54,14 @@ beforeEach(() => {
   vi.stubGlobal('fetch', m.fetch);
   m.member.mockResolvedValue({ data: () => ({ role: 'editor' }) });
   documents();
+  const pdf = await PDFDocument.create();
+  pdf.addPage();
+  pdf.addPage().drawText('Rundown content');
+  pdf.addPage();
+  const bytes = Buffer.from(await pdf.save());
   m.file.mockReturnValue({
     getMetadata: async () => [{ size: '123' }],
-    download: async () => [Buffer.from('%PDF')],
+    download: async () => [bytes],
   });
   m.fetch.mockResolvedValue({ ok: true });
   m.share.mockResolvedValue({ token: 'a'.repeat(48) });
@@ -83,9 +89,9 @@ it('attaches only the full PDF for the saved event person', async () => {
       data: { tenantId: 'a', eventId: 'e', personId: 'p' },
     }),
   );
-  expect(body.attachments).toEqual([
-    { filename: 'Session pack.pdf', content: Buffer.from('%PDF').toString('base64') },
-  ]);
+  expect(body.attachments).toEqual([{ filename: 'Session pack.pdf', content: expect.any(String) }]);
+  const attachment = await PDFDocument.load(Buffer.from(body.attachments[0].content, 'base64'));
+  expect(attachment.getPageCount()).toBe(1);
   expect(m.update).toHaveBeenCalledWith({ emailSentTo: request.data.email });
 });
 it('escapes names in HTML and removes line breaks from the subject', () => {
@@ -185,6 +191,7 @@ it('allows retry of a failed submission with the same key and acknowledges a com
   expect(m.fetch.mock.calls[0][1].headers['Idempotency-Key']).toEqual(
     m.fetch.mock.calls[1][1].headers['Idempotency-Key'],
   );
+  expect(m.fetch.mock.calls[0][1].body).toBe(m.fetch.mock.calls[1][1].body);
   documents({ emailSentTo: request.data.email });
   await sendPackEmail(request);
   expect(m.fetch).toHaveBeenCalledTimes(2);

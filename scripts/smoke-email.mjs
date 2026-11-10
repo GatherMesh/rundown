@@ -1,16 +1,164 @@
-// Seeded emulators and localhost:9000 required. Mail requests are intercepted; no email is sent.
+// Seeded emulators + localhost:9000 required. Start emulators with scripts/mock-resend.cjs.
+// Uses only demo-rundown; no production data or real email delivery.
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile, rm } from 'node:fs/promises';
 import { build } from 'esbuild';
 import puppeteer from 'puppeteer-core';
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
+import { PDFDocument } from 'pdf-lib';
+if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.STORAGE_EMULATOR_HOST)
+  throw new Error('Set FIRESTORE_EMULATOR_HOST and STORAGE_EMULATOR_HOST to the demo emulators.');
+initializeApp({ projectId: 'demo-rundown', storageBucket: 'demo-rundown.appspot.com' });
+const db = getFirestore(),
+  eventPath = 'tenants/qcec/events/easter-2027';
 const browser = await puppeteer.launch({
   executablePath:
     process.env.CHROME_EXECUTABLE_PATH ??
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   headless: true,
 });
+let page;
 try {
+  await db.recursiveDelete(db.collection(`${eventPath}/emailJobs`));
+  await rm('artifacts/email-deliveries', { recursive: true, force: true });
   await mkdir('artifacts', { recursive: true });
+  page = await browser.newPage();
+  const errors = [],
+    browserWork = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('request', (request) => {
+    if (/\/(renderPack|emailPack)$/.test(request.url())) browserWork.push(request.url());
+  });
+  async function settle() {
+    await page.evaluate(async () => {
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+          .map((a) => a.finished.catch(() => {})),
+      );
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+  }
+  async function fill(selector, value) {
+    await page.focus(selector);
+    await page.$eval(selector, (el) => el.select());
+    await page.keyboard.press('Backspace');
+    await page.type(selector, value);
+  }
+  await page.setViewport({ width: 1440, height: 1050 });
+  await page.goto('http://localhost:9000/people');
+  await page.waitForSelector('button.avatar');
+  await page.click('button.avatar');
+  await page.locator('::-p-text(Sign out)').click();
+  await page.locator('::-p-text(Sign in to seeded demo)').click();
+  const email = (name) => `input[aria-label="Email address for ${name}"]`;
+  await page.waitForSelector(email('Priya Shah'));
+  await fill(email('Priya Shah'), 'priya@example.com');
+  await fill(email('Rev. Margaret Hill'), 'margaret@example.com');
+  assert.equal(
+    await page.$('[aria-label="Email pack to Priya Shah"]'),
+    null,
+    'email sending has moved out of People',
+  );
+  await page.locator('nav a[href="/email"]').click();
+  await page.waitForSelector('.email-composer');
+  await fill('.email-composer input[aria-label="Subject"]', 'Saturday team briefing');
+  await fill(
+    '.email-composer textarea[aria-label="Message (optional)"]',
+    'Thanks for being part of the team.\nPlease arrive 30 minutes before your session.',
+  );
+  await page.locator('::-p-text(Select all eligible people)').click();
+  await page.waitForFunction(() =>
+    document.querySelector('.email-composer').textContent.includes('Queue emails (2)'),
+  );
+  await settle();
+  for (const [width, height, label] of [
+    [1440, 1050, 'desktop'],
+    [768, 1024, 'tablet'],
+    [390, 844, 'mobile'],
+  ]) {
+    await page.setViewport({ width, height });
+    await page.screenshot({ path: `artifacts/email-compose-${label}.png`, fullPage: true });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  }
+  await page.setViewport({ width: 1440, height: 1050 });
+  await page.locator('button ::-p-text(Queue emails (2))').click();
+  await page.waitForFunction(() => document.body.textContent.includes('2 emails queued.'));
+  await page.locator('nav a[href="/people"]').click();
+  await page.waitForSelector(email('Priya Shah'));
+  async function waitForJobs(predicate) {
+    const end = Date.now() + 120000;
+    while (Date.now() < end) {
+      const jobs = (await db.collection(`${eventPath}/emailJobs`).get()).docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+      if (predicate(jobs)) return jobs;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    throw new Error('Background email jobs did not finish.');
+  }
+  let jobs = await waitForJobs(
+    (list) =>
+      list.length === 2 &&
+      list.some((j) => j.status === 'sent') &&
+      list.some((j) => j.status === 'failed'),
+  );
+  assert.equal(jobs.find((j) => j.personId === 'margaret').status, 'sent');
+  assert.equal(jobs.find((j) => j.personId === 'priya').status, 'failed');
+  await page.goto('http://localhost:9000/email'); // reload proves queue persists beyond the composing page
+  await page.waitForSelector('.email-tabs');
+  await page.locator('.email-tabs ::-p-text(Queue)').click();
+  await page.waitForSelector('[aria-label="Retry email to Priya Shah"]');
+  await settle();
+  for (const [width, height, label] of [
+    [1440, 1050, 'desktop'],
+    [768, 1024, 'tablet'],
+    [390, 844, 'mobile'],
+  ]) {
+    await page.setViewport({ width, height });
+    await page.screenshot({ path: `artifacts/email-queue-${label}.png`, fullPage: true });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  }
+  await page.setViewport({ width: 1440, height: 1050 });
+  await page.click('[aria-label="Retry email to Priya Shah"]');
+  jobs = await waitForJobs((list) => list.length === 2 && list.every((j) => j.status === 'sent'));
+  await page.waitForFunction(
+    () => !document.querySelector('[aria-label="Retry email to Priya Shah"]'),
+  );
+  const files = await readdir('artifacts/email-deliveries');
+  const records = await Promise.all(
+    files.map(async (name) =>
+      JSON.parse(await readFile(`artifacts/email-deliveries/${name}`, 'utf8')),
+    ),
+  );
+  assert.equal(records.length, 2);
+  assert.equal(records.find((r) => r.body.to[0] === 'priya@example.com').count, 2);
+  assert.equal(records.find((r) => r.body.to[0] === 'margaret@example.com').count, 1);
+  for (const record of records) {
+    assert.equal(record.body.subject, 'Saturday team briefing');
+    assert.ok(record.body.html.includes('team.<br>Please arrive'));
+    assert.ok(record.body.text.includes('team.\nPlease arrive'));
+    assert.ok(record.body.html.includes('/runsheet/qcec/easter-2027/'));
+    const attachment = Buffer.from(record.body.attachments[0].content, 'base64');
+    const pdf = await PDFDocument.load(attachment);
+    assert.ok(
+      pdf.getPages().every((p) => !!p.node.Contents()),
+      'attachment has no print-padding pages',
+    );
+    const job = jobs.find((j) => j.email === record.body.to[0]);
+    const originalJob = (await db.doc(`tenants/qcec/exportJobs/${job.exportJobId}`).get()).data();
+    const [bytes] = await getStorage().bucket().file(originalJob.path).download();
+    const original = await PDFDocument.load(bytes);
+    assert.ok(original.getPageCount() > pdf.getPageCount());
+    assert.equal(pdf.getPageCount(), original.getPages().filter((p) => !!p.node.Contents()).length);
+    if (job.personId === 'margaret') await writeFile('artifacts/email-attachment.pdf', attachment);
+  }
+  assert.deepEqual(browserWork, [], 'rendering and delivery run only in the worker');
+  assert.deepEqual(errors, []);
   await build({
     entryPoints: ['functions/src/pack-email-template.ts'],
     bundle: true,
@@ -26,179 +174,21 @@ try {
       'Easter Convention 2027',
       'https://gathermesh-rundown.web.app/runsheet/preview/event/person/' + 'a'.repeat(48),
       {
-        subject: 'Your Saturday team briefing',
+        subject: 'Saturday team briefing',
         message:
-          'Thanks for being part of the team.\nPlease arrive 30 minutes before your session for a quick briefing.',
+          'Thanks for being part of the team.\nPlease arrive 30 minutes before your session.',
       },
     ).html,
   );
-  const page = await browser.newPage();
-  async function settle() {
-    await page.evaluate(async () => {
-      await Promise.all(
-        document
-          .getAnimations()
-          .filter((a) => a.effect?.getTiming().iterations !== Infinity)
-          .map((a) => a.finished.catch(() => {})),
-      );
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    });
-  }
-  await page.setViewport({ width: 1440, height: 1050 });
-  const errors = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  const sends = [];
-  await page.setRequestInterception(true);
-  page.on('request', async (request) => {
-    if (!request.url().endsWith('/emailPack')) return request.continue();
-    const headers = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, content-type',
-      'Content-Type': 'application/json',
-    };
-    if (request.method() === 'OPTIONS') return request.respond({ status: 204, headers });
-    const data = JSON.parse(request.postData()).data;
-    sends.push(data);
-    const fail =
-      data.personId === 'priya' && sends.filter((s) => s.personId === 'priya').length <= 2;
-    return request.respond({
-      status: fail ? 503 : 200,
-      headers,
-      body: JSON.stringify(
-        fail
-          ? {
-              error: {
-                status: 'UNAVAILABLE',
-                message: 'Test mail service unavailable. Retry this recipient.',
-              },
-            }
-          : { result: { sent: true } },
-      ),
-    });
-  });
-  await page.goto('http://localhost:9000/people');
-  await page.waitForSelector('button.avatar');
-  await page.click('button.avatar');
-  await page.locator('::-p-text(Sign out)').click();
-  await page.locator('::-p-text(Sign in to seeded demo)').click();
-  const email = (name) => `input[aria-label="Email address for ${name}"]`;
-  await page.waitForSelector(email('Priya Shah'));
-  for (const name of ['Priya Shah', 'Rev. Margaret Hill']) {
-    await page
-      .locator(email(name))
-      .fill(name === 'Priya Shah' ? 'priya@example.com' : 'margaret@example.com');
-  }
-  await page.locator('button ::-p-text(Email packs)').click();
-  await page.waitForSelector('.email-packs');
-  await settle();
-  const subjectInput = '.email-packs input[aria-label="Subject"]';
-  const messageInput = '.email-packs textarea[aria-label="Message (optional)"]';
-  async function fillEmailField(selector, value) {
-    await page.focus(selector);
-    await page.$eval(selector, (el) => el.select());
-    await page.keyboard.press('Backspace');
-    await page.type(selector, value);
-    assert.equal(await page.$eval(selector, (el) => el.value), value);
-  }
-  assert.equal(
-    await page.$eval(subjectInput, (el) => el.value),
-    'Your rundowns for Easter Convention 2027',
-  );
-  await fillEmailField(subjectInput, 'Your Saturday team briefing');
-  await fillEmailField(
-    messageInput,
-    'Thanks for being part of the team.\nPlease arrive 30 minutes before your session for a quick briefing.',
-  );
-  await page.evaluate(() =>
-    Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))),
-  );
-  await page.locator('::-p-text(Select all eligible people)').click();
-  await page.waitForFunction(() =>
-    document.querySelector('.email-packs').textContent.includes('Send emails (2)'),
-  );
-  await settle();
-  await page.screenshot({ path: 'artifacts/email-recipients-desktop.png' });
-  await page.setViewport({ width: 768, height: 1024 });
-  await page.screenshot({ path: 'artifacts/email-recipients-tablet.png' });
-  await page.setViewport({ width: 390, height: 844 });
-  await page.screenshot({ path: 'artifacts/email-recipients-mobile.png' });
-  await page.setViewport({ width: 1440, height: 1050 });
-  await page.locator('button ::-p-text(Send emails (2))').click();
-  await page.waitForFunction(
-    () =>
-      document.querySelector('.email-packs').textContent.includes('Test mail service unavailable'),
-    { timeout: 120000 },
-  );
-  await page.waitForFunction(
-    () => document.querySelector('.email-packs').textContent.includes('Sent'),
-    { timeout: 120000 },
-  );
-  await page.waitForFunction(() =>
-    document.querySelector('.email-packs').textContent.includes('Send emails (1)'),
-  );
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll('.email-packs button')].some(
-      (b) => b.textContent.includes('Send emails (1)') && !b.disabled,
-    ),
-  );
-  await settle();
-  await page.screenshot({ path: 'artifacts/email-recipients-retry.png' });
-  const retried = page.waitForResponse((r) => r.url().endsWith('/emailPack') && r.status() === 503);
-  await page.locator('button ::-p-text(Send emails (1))').click();
-  await retried;
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll('.email-packs button')].some(
-      (b) => b.textContent.includes('Send emails (1)') && !b.disabled,
-    ),
-  );
-  await fillEmailField(subjectInput, 'Updated Saturday team briefing');
-  await fillEmailField(messageInput, 'Please arrive at 6 pm.\nBring your notes.');
-  await page.locator('button ::-p-text(Send emails (1))').click();
-  await page.waitForFunction(
-    () => document.querySelector('.email-packs').textContent.includes('Send emails (0)'),
-    { timeout: 120000 },
-  );
-  assert.deepEqual(sends.map((s) => s.personId).sort(), ['margaret', 'priya', 'priya', 'priya']);
-  const priyaSends = sends.filter((s) => s.personId === 'priya');
-  assert.equal(
-    priyaSends[0].jobId,
-    priyaSends[1].jobId,
-    'retry reuses the rendered pack and idempotency key',
-  );
-  assert.equal(priyaSends[0].email, 'priya@example.com');
-  assert.notEqual(
-    priyaSends[1].jobId,
-    priyaSends[2].jobId,
-    'editing content creates a new send instead of reusing an old idempotency key',
-  );
-  assert.equal(priyaSends[0].subject, 'Your Saturday team briefing');
-  assert.equal(priyaSends[1].message, priyaSends[0].message);
-  assert.equal(priyaSends[2].subject, 'Updated Saturday team briefing');
-  assert.equal(priyaSends[2].message, 'Please arrive at 6 pm.\nBring your notes.');
-  assert.equal(sends.find((s) => s.personId === 'margaret').email, 'margaret@example.com');
-  assert.deepEqual(errors, []);
-  await page.locator('.email-packs button ::-p-text(Close)').click();
-  await page.waitForSelector('.email-packs', { hidden: true });
-  await page.locator('button ::-p-text(Add person)').click();
-  await page.waitForSelector('.q-dialog input[type="email"]');
-  await page.locator('.q-dialog input[aria-label="Name"]').fill('Email QA');
-  await page.locator('.q-dialog input[type="email"]').fill('new@example.com');
-  await page.locator('.q-dialog button[type="submit"]').click();
-  await page.waitForSelector(email('Email QA'));
-  assert.equal(await page.$eval(email('Email QA'), (e) => e.value), 'new@example.com');
-  const preview = await browser.newPage();
-  await preview.goto(new URL('../artifacts/pack-email-preview.html', import.meta.url).href);
-  for (const [width, height, label] of [
-    [700, 900, 'desktop'],
-    [390, 1000, 'mobile'],
-  ]) {
-    await preview.setViewport({ width, height });
-    await preview.screenshot({ path: `artifacts/pack-email-${label}.png`, fullPage: true });
-    assert.ok(await preview.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-  }
   console.log(
-    'PASS: saved emails, eligible selection, per-person PDF generation, partial failure, retry, add person, and responsive email layout. No emails sent.',
+    'PASS: dedicated Email page, background delivery after navigation, persistent queue after reload, per-recipient failure/retry, stable send keys, and blank-free attachments. No real emails sent.',
   );
+} catch (error) {
+  if (page) {
+    await page.screenshot({ path: 'artifacts/email-smoke-error.png', fullPage: true });
+    console.error((await page.evaluate(() => document.body.textContent)).slice(0, 1200));
+  }
+  throw error;
 } finally {
   await browser.close();
 }

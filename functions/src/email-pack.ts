@@ -8,14 +8,10 @@ import { id } from './api-contract';
 import { authorize } from './api-service';
 import { createRunsheetLink } from './public-runsheet';
 import { packEmailMessage } from './pack-email-template';
+import { emailPdf } from './email-pdf';
 
 export const resendKey = defineSecret('RESEND_API_KEY');
-const selection = z.strictObject({
-  tenantId: id,
-  eventId: id,
-  personId: id,
-  jobId: id,
-  email: z.email(),
+export const emailContent = {
   subject: z
     .string()
     .trim()
@@ -24,7 +20,26 @@ const selection = z.strictObject({
     .regex(/^[^\r\n]+$/)
     .optional(),
   message: z.string().trim().max(5000).optional(),
+};
+export const selection = z.strictObject({
+  tenantId: id,
+  eventId: id,
+  personId: id,
+  jobId: id,
+  email: z.email(),
+  ...emailContent,
 });
+
+export function assertEmailEnabled(tenantId: string) {
+  if (
+    !process.env.PACK_EMAIL_TENANTS?.split(',')
+      .map((v) => v.trim())
+      .includes(tenantId)
+  )
+    throw new HttpsError('failed-precondition', 'Pack email is not enabled for this organisation.');
+  if (!process.env.PACK_EMAIL_FROM)
+    throw new HttpsError('failed-precondition', 'The pack email sender is not configured.');
+}
 
 export async function sendPackEmail(request: CallableRequest) {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to email session packs.');
@@ -38,12 +53,7 @@ export async function sendPackEmail(request: CallableRequest) {
   const db = getFirestore(),
     uid = request.auth.uid;
   await authorize(db, uid, tenantId, 'edit');
-  if (
-    !process.env.PACK_EMAIL_TENANTS?.split(',')
-      .map((v) => v.trim())
-      .includes(tenantId)
-  )
-    throw new HttpsError('failed-precondition', 'Pack email is not enabled for this organisation.');
+  assertEmailEnabled(tenantId);
   const from = process.env.PACK_EMAIL_FROM,
     key = resendKey.value();
   if (!from || !key)
@@ -82,7 +92,8 @@ export async function sendPackEmail(request: CallableRequest) {
       'The PDF exceeds the 25 MB attachment limit. Reduce its size in Export.',
       { newPack: true },
     );
-  const [pdf] = await file.download();
+  const [bytes] = await file.download();
+  const pdf = await emailPdf(bytes);
   const link = await createRunsheetLink({
     ...request,
     data: { tenantId, eventId, personId },

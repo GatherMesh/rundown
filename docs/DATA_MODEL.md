@@ -12,6 +12,7 @@ tenants/{tenantId}                              Tenant
     people/{personId}                           Person  (+ pack settings)
     sessions/{sessionId}                        Session
       items/{itemId}                            Item
+    emailJobs/{jobId}                           Server-owned queued email and delivery status
     printRecords/{hashOfPersonAndSession}        Last confirmed printed session snapshot
     runsheetLinks/{personId}                    Server-only public link token and creation audit
     sessionRunsheetLinks/{sessionId}            Server-only generic session link token and audit
@@ -117,6 +118,23 @@ the completed export job's server-generated `revisions`. Jobs also store `eventI
 `printConfirmedAt`. Confirmation is atomic, idempotent, limited to the job's creator, and cannot
 replace a newer record. `renderAllPacks({ ..., reprintsOnly: true })` compares these records
 against current recipient/session content and exports only the outstanding full sessions.
+
+### Email queue
+
+`emailJobs` documents store `{ personId, recipientName, email, subject, message, createdBy,
+createdAt, updatedAt, status, attempt, error, exportJobId?, leaseUntil?, sentAt?, retryable? }`.
+Status is `queued | preparing | sending | sent | failed`. The ID hashes the sender, submission ID
+and person ID, making a retried enqueue idempotent. Each request atomically creates up to 100 jobs.
+
+`processEmailJob` reacts to a transition into Queued for a new attempt. A transactional ten-minute
+lease prevents concurrent duplicate processing; infrastructure failures redeliver the event, and
+expired leases can resume. The worker runs one invocation at a time, with a nine-minute timeout.
+Operational failures become visible Failed jobs. Manual retry increments `attempt`; stale events
+are ignored and completed PDF jobs are reused so the Resend idempotency key stays stable.
+Permissions, configured sender access, and the saved email address are checked again before sending.
+
+Clients can read jobs through tenant membership, but cannot create, update, or delete them. Queue
+queries use event-scoped `orderBy('createdAt', 'desc')` and `limit(100)`; no composite index is needed.
 
 ## Queries & indexes
 

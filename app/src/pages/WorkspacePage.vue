@@ -6,6 +6,7 @@ import TemplatesPage from './TemplatesPage.vue';
 import ExportPage from './ExportPage.vue';
 import ReferencePage from './ReferencePage.vue';
 import OrganisationPage from './OrganisationPage.vue';
+import EmailPage from './EmailPage.vue';
 const route = useRoute();
 const page = computed(() => String(route.params.page || 'sessions'));
 </script>
@@ -17,6 +18,7 @@ const page = computed(() => String(route.params.page || 'sessions'));
     :kind="page"
   />
   <OrganisationPage v-else-if="page === 'organisation'" />
+  <EmailPage v-else-if="page === 'email'" />
   <main v-else class="empty-state">
     <h1>Page not found</h1>
     <router-link to="/sessions">Open sessions</router-link>

@@ -63,7 +63,10 @@ export default defineBoot(async ({ app }) => {
         history.replaceState({}, '', location.pathname);
       }
     }
-    if (emulator && !auth.currentUser) await signInAnonymously(auth);
+    if (emulator) {
+      await auth.authStateReady();
+      if (!auth.currentUser) await signInAnonymously(auth);
+    }
   } catch (e) {
     store.fail(e);
   }

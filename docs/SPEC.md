@@ -149,13 +149,28 @@ Existing packs without session IDs include all sessions; new packs start with no
 Event-scoped list: name, role, email (optional), initials override, items count in the selected
 session. Add / edit / delete (block delete if on items; offer "remove from items").
 
-Owners and editors can email a person from their row or select several people in **Email packs**.
-Select all includes people with a valid email and a configured pack. Each receives their own full
-multi-session PDF, with per-recipient status and retry for unsuccessful sends.
-The styled email also includes the person's existing stable digital runsheet link, with no login
-required; the PDF is a snapshot, while the digital view shows current saved changes.
+Email addresses are managed here; composition and delivery live on the Email page.
 
-### 4.5 Categories page (not designed)
+### 4.5 Email page
+
+Event-scoped **Compose** and **Queue** tabs. Compose includes an editable subject (200 characters),
+optional message (5,000 characters), and selection of people with a valid address and configured
+pack. Queue emails creates a persistent server job per recipient; PDF rendering and sending run
+in the background and continue after navigation or closing the browser. Jobs use current saved
+rundown content when the worker prepares the PDF.
+
+Queue shows the latest 100 event jobs with recipient, subject, created time, and live Queued,
+Preparing PDF, Sending, Sent, or Failed status. Owners/editors can retry failed jobs with the same
+saved composition and prepared PDF; sent recipients are unaffected. Expired retry windows direct
+the user to compose a new email. Queue history is readable by tenant members and writable only by
+the server. The worker rechecks the original sender's edit permission and saved recipient address.
+
+Attachments omit blank print-padding pages and printer-only short-edge rotations, retaining
+content, covers, copies, and scaling. Printed exports keep their existing layout. The styled email
+and plain-text version include the person's existing stable digital runsheet link without login;
+the PDF is a snapshot, while the digital view shows current saved changes.
+
+### 4.6 Categories page (not designed)
 
 Tenant-wide list with name, colour (pick from the 7 pill palettes in `DESIGN.md`, plus custom),
 drag to reorder, item count. Delete only when unused.

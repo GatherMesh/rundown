@@ -171,3 +171,12 @@ Doc page counts are inputs. "b" = blank side.
 
 Combined job of A + B + C + D (C and D are single-sided → blank backs):
 A 6 + B 8 + C (1 + b) 2 + D (AS b AS b) 4 = **20 sides = 10 sheets**, every pack starting on a front.
+
+## Email attachments
+
+The background email worker prepares a normal full person pack through the shared renderer.
+Before attaching it, the email pipeline removes the assembler's blank padding pages (pages with
+no content streams), resets printer-only short-edge rotations, and sets simplex viewer preferences.
+It retains every rendered content page, cover, configured copy, and n-up layout. The stored print
+PDF, print tracking and Print All behavior stay unchanged. PDF metadata is preserved during this
+conversion so retries produce byte-identical attachments for Resend's idempotency key.
